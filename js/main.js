@@ -592,7 +592,7 @@ function flyToRoom(i, instant = false) {
 }
 function updateFlight(now) {
   if (!flight) return;
-  const k = Math.min(1, (now - flight.start) / flight.dur), e = ease(k);
+  const k = THREE.MathUtils.clamp((now - flight.start) / flight.dur, 0, 1), e = ease(k);
   const pt = flight.curve.getPointAt(e), tan = flight.curve.getTangentAt(Math.min(0.999, e));
   player.pos.copy(pt);
   const travelYaw = Math.atan2(-tan.x, -tan.z);
@@ -611,7 +611,7 @@ const ease = (k) => (k < 0.5 ? 4 * k * k * k : 1 - Math.pow(-2 * k + 2, 3) / 2);
 function tween(ms, fn, done) { tweens.push({ ms: reduceMotion ? Math.min(ms, 250) : ms, fn, done, t0: performance.now() }); }
 function runTweens(now) {
   for (let i = tweens.length - 1; i >= 0; i--) {
-    const tw = tweens[i], k = Math.min(1, (now - tw.t0) / tw.ms);
+    const tw = tweens[i], k = THREE.MathUtils.clamp((now - tw.t0) / tw.ms, 0, 1);
     tw.fn(k);
     if (k >= 1) { tweens.splice(i, 1); tw.done?.(); }
   }
@@ -697,17 +697,33 @@ fsBtn.addEventListener('click', () => {
 });
 document.addEventListener('fullscreenchange', () => fsBtn.setAttribute('aria-label', document.fullscreenElement ? 'Salir de pantalla completa' : 'Pantalla completa'));
 
-// Formulario de contacto: sin servidor propio, prepara el correo a contacto@grupokeipoint.com.
+// Formulario de contacto. Dentro de WordPress (plugin Casa Cuco 3D) envía por el servidor;
+// como página suelta, abre el correo del visitante dirigido a contacto@grupokeipoint.com.
+const pageStart = Date.now();
 document.addEventListener('submit', (e) => {
   const form = e.target.closest('.contact-form');
   if (!form) return;
   e.preventDefault();
   const status = form.querySelector('.form-status');
+  const button = form.querySelector('[type=submit]');
   const data = Object.fromEntries(new FormData(form));
   const labels = { name: 'nombre', email: 'correo', message: 'mensaje' };
   const missing = Object.keys(labels).filter((k) => !String(data[k] || '').trim());
   if (missing.length) { status.textContent = 'Completa ' + missing.map((k) => labels[k]).join(', ') + ' para enviar.'; return; }
   if (!/^\S+@\S+\.\S+$/.test(data.email)) { status.textContent = 'Revisa el correo: falta la @ o el dominio.'; return; }
+  const endpoint = window.CASA_CUCO?.contactUrl;
+  if (endpoint) {
+    button.disabled = true; status.textContent = 'Enviando…';
+    fetch(endpoint, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ...data, elapsed: Date.now() - pageStart }) })
+      .then((r) => r.json().catch(() => ({})).then((j) => ({ ok: r.ok, j })))
+      .then(({ ok, j }) => {
+        status.textContent = ok ? 'Gracias. Recibimos tu mensaje y te responderemos pronto.' : (j.message || 'No pudimos enviar el mensaje. Escríbenos a contacto@grupokeipoint.com.');
+        if (ok) form.reset();
+      })
+      .catch(() => { status.textContent = 'No pudimos enviar el mensaje. Revisa tu conexión o escríbenos a contacto@grupokeipoint.com.'; })
+      .finally(() => { button.disabled = false; });
+    return;
+  }
   const mail = `mailto:contacto@grupokeipoint.com?subject=${encodeURIComponent('Casa Cuco · ' + data.name)}&body=${encodeURIComponent(`${data.message}\n\n${data.name} · ${data.email}`)}`;
   status.innerHTML = `Abrimos tu correo con el mensaje listo. Si no se abre, <a href="${mail}">haz clic aquí</a> o escribe a contacto@grupokeipoint.com.`;
   try { location.href = mail; } catch { /* el enlace queda visible */ }

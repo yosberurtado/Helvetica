@@ -23,6 +23,23 @@ facetada y luz verde. En cada sala hay un **holograma con la sección de la web 
 - Enlaces directos: `index.html#proyectos`, `#contacto`, etc.
 - Para salir, cruza la puerta de luz de la primera sala o usa "Salir al exterior".
 
+## Publicar en WordPress (plugin)
+
+El archivo listo para subir es `dist/casa-cuco-3d.zip`.
+
+1. **Plugins → Añadir nuevo → Subir plugin**, elige `casa-cuco-3d.zip`, instala y activa.
+2. **Páginas → Añadir nueva**, ponle un título y en **Página → Plantilla** elige
+   **Casa Cuco 3D – pantalla completa**. Publica y revísala en computador y celular.
+3. Para dejarla como portada: **Ajustes → Lectura → Una página estática** y elígela.
+4. En **Ajustes → Casa Cuco 3D** se define el correo que recibe los mensajes del formulario.
+5. Si usas LiteSpeed Cache, purga la caché después de instalar o actualizar.
+
+El formulario envía con `wp_mail()`. Si los correos no llegan, instala un plugin SMTP (por ejemplo WP Mail SMTP).
+Tiene campo trampa, tiempo mínimo y límite de 5 mensajes cada 10 minutos por IP contra el spam.
+
+Para generar el plugin después de cambiar la web: `python3 tools/build-plugin.py`.
+El código PHP del plugin está en `wordpress/casa-cuco-3d/`.
+
 ## Ejecutar en local
 
 Usa módulos ES, así que hay que servirlo (no abrir el archivo con doble clic):
@@ -54,4 +71,5 @@ Funciona tal cual en GitHub Pages, Netlify o Vercel (sitio estático).
 
 ## Formulario de contacto
 
-No hay servidor, así que "Enviar" abre el correo del visitante con el mensaje para `contacto@grupokeipoint.com`.
+En WordPress envía por el servidor (ver arriba). Como página suelta, sin servidor, "Enviar" abre el correo del
+visitante con el mensaje para `contacto@grupokeipoint.com`.

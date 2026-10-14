@@ -165,6 +165,7 @@ img{max-width:100%}
 .contact-form input,.contact-form textarea{width:100%;padding:11px 13px;border:1px solid #daff0266;border-radius:2px;background:#ffffff;color:var(--ink);font:15px var(--ui);letter-spacing:.06em;resize:none}
 .contact-form input:focus,.contact-form textarea:focus{outline:2px solid var(--acid);outline-offset:1px}
 .contact-form .btn-solid{justify-self:start;font-size:13px}
+.contact-form .hp{position:absolute;left:-9999px;width:1px;height:1px;overflow:hidden}
 .form-status{margin:0!important;min-height:1.2em;font:14px/1.4 var(--ui)!important;color:var(--acid)}
 .form-status a{color:var(--acid);text-decoration:underline!important}
 .contact-side{display:flex;flex-direction:column;gap:16px}
