@@ -704,10 +704,10 @@ document.addEventListener('submit', (e) => {
   e.preventDefault();
   const status = form.querySelector('.form-status');
   const data = Object.fromEntries(new FormData(form));
-  const labels = { name: 'nombre', email: 'email', message: 'mensaje' };
+  const labels = { name: 'nombre', email: 'correo', message: 'mensaje' };
   const missing = Object.keys(labels).filter((k) => !String(data[k] || '').trim());
   if (missing.length) { status.textContent = 'Completa ' + missing.map((k) => labels[k]).join(', ') + ' para enviar.'; return; }
-  if (!/^\S+@\S+\.\S+$/.test(data.email)) { status.textContent = 'Revisa el email: falta la @ o el dominio.'; return; }
+  if (!/^\S+@\S+\.\S+$/.test(data.email)) { status.textContent = 'Revisa el correo: falta la @ o el dominio.'; return; }
   const mail = `mailto:contacto@grupokeipoint.com?subject=${encodeURIComponent('Casa Cuco · ' + data.name)}&body=${encodeURIComponent(`${data.message}\n\n${data.name} · ${data.email}`)}`;
   status.innerHTML = `Abrimos tu correo con el mensaje listo. Si no se abre, <a href="${mail}">haz clic aquí</a> o escribe a contacto@grupokeipoint.com.`;
   try { location.href = mail; } catch { /* el enlace queda visible */ }
@@ -809,7 +809,7 @@ function moveJoy(e) {
   joy.x = x; joy.y = y; knob.style.transform = `translate(${x * 36}px,${y * 36}px)`;
 }
 if (isTouch) $('#extHint').innerHTML = '<b>Arrastra</b> girar · <b>Toca la puerta</b> para entrar';
-if (isTouch) $('#intHint').innerHTML = '<b>Joystick</b> caminar · <b>Arrastra</b> mirar · <b>Toca el piso</b> ir ahí';
+if (isTouch) $('#intHint').innerHTML = '<b>Control</b> caminar · <b>Arrastra</b> mirar · <b>Toca el piso</b> ir ahí';
 
 // ---------------------------------------------------------------- Minimapa
 const mm = $('#minimap'), mg = mm.getContext('2d');
