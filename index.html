@@ -48,7 +48,10 @@
     <button type="button" data-go="servicios">Servicios</button>
     <button type="button" data-go="contacto">Contacto</button>
   </nav>
-  <button type="button" class="menu-btn" id="menuBtn" aria-expanded="false" aria-controls="nav">Menú</button>
+  <div class="top-actions">
+    <button type="button" class="icon-btn" id="fsBtn" aria-label="Pantalla completa" title="Pantalla completa"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9V4h5M15 4h5v5M20 15v5h-5M9 20H4v-5" fill="none" stroke="currentColor" stroke-width="2"/></svg></button>
+    <button type="button" class="menu-btn" id="menuBtn" aria-expanded="false" aria-controls="nav">Menú</button>
+  </div>
 </header>
 
 <!-- Interfaz del exterior -->
@@ -67,36 +70,23 @@
 
 <!-- Interfaz del interior -->
 <section class="int-ui" id="intUI" hidden>
-  <div class="room-caption">
-    <p class="eyebrow" id="roomEyebrow">Sala 01 · Inicio</p>
-    <h2 id="roomTitle">Inicio</h2>
-    <div class="int-actions">
-      <button type="button" class="btn-solid" id="sectionBtn">Ver sección</button>
-      <button type="button" class="btn-ghost" id="exitBtn">Salir al exterior</button>
-    </div>
+  <div class="room-bar">
+    <p class="eyebrow" id="roomLabel">Sala 01 · Inicio</p>
+    <button type="button" class="btn-ghost" id="exitBtn">Salir al exterior</button>
   </div>
   <div class="map-box">
     <canvas id="minimap" width="240" height="64" aria-label="Plano de la casa. Toca una sala para ir."></canvas>
-    <p class="hint" id="intHint"><b>W A S D</b> caminar · <b>Shift</b> correr · <b>Arrastra</b> mirar · <b>Clic en el piso</b> ir ahí</p>
+    <p class="hint" id="intHint"><b>W A S D</b> caminar · <b>Arrastra</b> mirar · <b>Clic en el piso</b> ir ahí · <b>1–5</b> salas</p>
   </div>
   <div class="joy" id="joy" aria-hidden="true"><div class="joy-knob" id="joyKnob"></div></div>
 </section>
 
-<!-- Sección a pantalla completa (misma información del holograma) -->
-<div class="overlay" id="overlay" hidden>
-  <div class="overlay-box" role="dialog" aria-modal="true" aria-label="Sección">
-    <button type="button" class="overlay-close" id="overlayClose" aria-label="Cerrar sección">Cerrar ✕</button>
-    <div id="overlayBody"></div>
-  </div>
-</div>
-
 <div class="fade" id="fade" aria-hidden="true"></div>
 <div class="loading" id="loading"><svg class="brand-mark" aria-hidden="true"><use href="#cuco"/></svg><span>Construyendo la casa</span></div>
-<div class="toast" id="toast" role="status" aria-live="polite"></div>
 
 <!--
   HOLOGRAMAS · Cada <template> es una sección de la web.
-  El mismo HTML se proyecta en 3D dentro de su sala y se abre a pantalla completa con "Ver sección".
+  El mismo HTML se proyecta en 3D dentro de su sala (formato horizontal en PC, vertical en móvil).
   Para usar fotos reales, deja los archivos en assets/ con el nombre indicado en cada <img>;
   si no existen, se muestra la ilustración de reemplazo.
 -->

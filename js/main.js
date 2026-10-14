@@ -269,11 +269,11 @@ const doorPoly = (dx, e = 0) => [[dx - DOOR_W - e, -1], [dx + DOOR_W + e, -1], [
 function buildInterior() {
   const scene = new THREE.Scene();
   scene.background = new THREE.Color('#040503');
-  scene.fog = new THREE.FogExp2('#040503', 0.022);
-  scene.add(new THREE.HemisphereLight(0xdfe6c4, 0x0b0d08, 0.22));
+  scene.fog = new THREE.FogExp2('#040503', 0.015);
+  scene.add(new THREE.HemisphereLight(0xdfe6c4, 0x0b0d08, 0.32));
 
   const wallTex = stoneTexture('#c9c8b8'); wallTex.repeat.set(1, 1);
-  const wallMat = new THREE.MeshStandardMaterial({ map: wallTex, bumpMap: wallTex, bumpScale: 0.6, color: '#a3a291', roughness: 0.86, metalness: 0.02, side: THREE.DoubleSide });
+  const wallMat = new THREE.MeshStandardMaterial({ map: wallTex, bumpMap: wallTex, bumpScale: 0.22, color: '#aaa99a', roughness: 0.82, metalness: 0.02, side: THREE.DoubleSide });
   const darkWallMat = wallMat.clone(); darkWallMat.color.set('#8d8d7e');
   const len = NWALL - 1;
   const zEnd = -len * D;
@@ -283,11 +283,11 @@ function buildInterior() {
   const sides = [-1, 1];
   for (const s of sides) {
     scene.add(new THREE.Mesh(facetSurface({
-      u0: zEnd - 1.5, u1: 1.5, v0: -0.3, v1: H + 1.4, cell: 1.6, amp: 0.36, bias: 0.4, seed: s > 0 ? 3 : 5,
+      u0: zEnd - 1.5, u1: 1.5, v0: -0.3, v1: H + 1.4, cell: 2.6, amp: 0.13, bias: 0.3, wave: 0.3, jitter: 0.14, seed: s > 0 ? 3 : 5,
       map: (u, v, d) => [s * (half + 0.7 - d), v, u],
     }), wallMat));
     scene.add(new THREE.Mesh(facetSurface({
-      u0: -1.6, u1: half + 0.8, v0: zEnd - 1.5, v1: 1.5, cell: 1.9, amp: 0.45, bias: 0.25, seed: s > 0 ? 7 : 11,
+      u0: -1.6, u1: half + 0.8, v0: zEnd - 1.5, v1: 1.5, cell: 2.8, amp: 0.16, bias: 0.15, wave: 0.3, jitter: 0.14, seed: s > 0 ? 7 : 11,
       map: (u, v, d) => [s * (half - u) - s * (slope / nl) * d, H + slope * u - d / nl, v],
     }), darkWallMat));
   }
@@ -298,7 +298,7 @@ function buildInterior() {
   for (let k = 0; k < NWALL; k++) {
     const zw = -k * D, dx = doorX(k), hole = doorPoly(dx, 0.12);
     scene.add(new THREE.Mesh(facetSurface({
-      u0: -half - 1.2, u1: half + 1.2, v0: -0.3, v1: H + R + 0.8, cell: 1.05, amp: 0.38, seed: 20 + k,
+      u0: -half - 1.2, u1: half + 1.2, v0: -0.3, v1: H + R + 0.8, cell: 1.05, amp: 0.1, wave: 0.4, jitter: 0.1, seed: 20 + k,
       map: (u, v, d) => [u, v, zw + d], hole: (u, v) => pointInPoly(u, v, hole),
     }), wallMat));
     // Marco grueso del vano.
@@ -352,10 +352,13 @@ function buildInterior() {
     const g = new THREE.Mesh(new THREE.PlaneGeometry(7, 7), glowMat(0.55)); g.rotation.x = -Math.PI / 2; g.position.set(d.dx, 0.012, d.zw + side * 2.4); floorDecals.add(g);
   }
 
-  // Ojos del techo con haz de luz, rocas facetadas, cuernos y luz de cada sala.
+  // Zócalo de luz a lo largo de ambas paredes: da un acabado de galería.
+  for (const sx of [-1, 1]) scene.add(bar(new V3(sx * (half + 0.12), 0.06, 0.5), new V3(sx * (half + 0.12), 0.06, zEnd - 0.5), 0.05, neonMat));
+
+  // Ojos del techo con haz de luz, cuernos y luz de cada sala.
   const eyeDark = new THREE.MeshStandardMaterial({ color: '#040503', roughness: 0.25, metalness: 0.5 });
   const eyeLit = new THREE.MeshStandardMaterial({ color: ACID, emissive: 0xc8ff00, emissiveIntensity: 4 });
-  const rockMat = wallMat.clone(); rockMat.flatShading = true; rockMat.color.set('#a8a795');
+  const hornMat = wallMat.clone(); hornMat.flatShading = true; hornMat.color.set('#b4b3a3');
   const eyes = [], obstacles = [], panels = [];
   ROOMS.forEach((room, i) => {
     const z0 = -i * D, zc = z0 - D / 2;
@@ -373,36 +376,17 @@ function buildInterior() {
     }
     const lamp = new THREE.PointLight(0xf1f4e0, 26, 26, 2); lamp.position.set(0, H + 1, zc); scene.add(lamp);
 
-    // Rocas: grandes poliedros incrustados en las paredes.
-    for (let r = 0; r < 5; r++) {
-      const s = r % 2 ? 1 : -1;
-      let rz = z0 - 2.5 - rand() * (D - 5);
-      const isPanelSide = s === panelSide;
-      if (isPanelSide && Math.abs(rz - (z0 - D * 0.6)) < 5) rz = z0 - (rand() > 0.5 ? 2.8 : D - 2.8);
-      const sz = 1.4 + rand() * 1.6;
-      const rock = new THREE.Mesh(new THREE.DodecahedronGeometry(1, 0), rockMat);
-      rock.scale.set(sz * (0.8 + rand() * 0.6), sz * (1 + rand() * 1.4), sz * (0.8 + rand() * 0.6));
-      rock.rotation.set(rand() * 3, rand() * 3, rand() * 3);
-      const rx = s * (half - 0.2 + rand() * 0.4);
-      rock.position.set(rx, sz * 0.5, rz); scene.add(rock);
-      obstacles.push({ type: 'circle', x: rx, z: rz, r: sz * 1.05 });
-    }
     // Cuerno en media luna (Nosotros y Contacto, como en las referencias).
     if (i === 1 || i === 4) {
       const cx = nextDx * 1.55, cy = H + 1.2, cz = z0 - D + 3;
       const pts = []; for (let a = 0; a <= 7; a++) { const t = -0.6 + (a / 7) * 3.4; pts.push(new V3(cx + Math.cos(t) * 1.9 * Math.sign(cx), cy + Math.sin(t) * 1.9, cz)); }
-      const horn = new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts), 24, 0.55, 5, false), rockMat); scene.add(horn);
+      const horn = new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts), 24, 0.55, 6, false), hornMat); scene.add(horn);
     }
 
     // Holograma: panel de vidrio con neón + la sección web en vivo (CSS3D).
     const theta = 0.3 * -panelSide;
-    const px = panelSide * 3.6, pz = z0 - D * 0.6, py = 2.75;
-    const pg = new THREE.Group(); pg.position.set(px, py, pz); pg.rotation.y = theta; scene.add(pg);
-    const slab = new THREE.Mesh(new THREE.BoxGeometry(7.5, 4.6, 0.08), new THREE.MeshStandardMaterial({ color: '#0e1706', emissive: '#283a05', emissiveIntensity: 0.6, roughness: 0.15, metalness: 0.2, transparent: true, opacity: 0.42, depthWrite: false }));
-    pg.add(slab);
-    const hw = 3.75, hh = 2.3;
-    for (const [a, b] of [[[-hw, -hh], [hw, -hh]], [[hw, -hh], [hw, hh]], [[hw, hh], [-hw, hh]], [[-hw, hh], [-hw, -hh]]]) pg.add(bar(new V3(a[0], a[1], 0), new V3(b[0], b[1], 0), 0.06, neonMat));
-    const base = bar(new V3(-hw, -py + 0.02, 0), new V3(hw, -py + 0.02, 0), 0.05, neonMat); pg.add(base);
+    const px = panelSide * 3.6, pz = z0 - D * 0.6;
+    const pg = new THREE.Group(); pg.position.set(px, 2.75, pz); pg.rotation.y = theta; scene.add(pg);
     const pool = new THREE.Mesh(new THREE.PlaneGeometry(10, 5), glowMat(0.5)); pool.rotation.x = -Math.PI / 2; pool.position.set(px, 0.014, pz + 1.2); pool.rotation.z = theta; floorDecals.add(pool);
 
     const wrap = document.createElement('div');
@@ -411,18 +395,38 @@ function buildInterior() {
     wrap.firstChild.appendChild($('#tpl-' + room.id).content.cloneNode(true));
     wrap.dataset.room = room.id;
     const css = new CSS3DObject(wrap);
-    css.scale.setScalar(7.2 / 1200);
     css.position.z = 0.06;
     pg.add(css);
 
     const normal = new V3(Math.sin(theta), 0, Math.cos(theta));
     const along = new V3(Math.cos(theta), 0, -Math.sin(theta));
-    const center = new V3(px, py, pz);
-    obstacles.push({ type: 'seg', a: center.clone().addScaledVector(along, -hw), b: center.clone().addScaledVector(along, hw), r: 0.5 });
-    panels.push({ room: i, group: pg, slab, css, wrap, center, normal, opacity: 0 });
+    const obstacle = { type: 'seg', a: new V3(), b: new V3(), r: 0.5 };
+    obstacles.push(obstacle);
+    panels.push({ room: i, group: pg, css, wrap, center: new V3(px, 2.75, pz), normal, along, obstacle, opacity: 0, frame: null, slab: null });
   });
 
-  scene.add(makeDust(900, [-half, half], [0.2, H + 2], [zEnd, 0]));
+  scene.add(makeDust(350, [-half, half], [0.2, H + 2], [zEnd, 0]));
+
+  // Formato del holograma: horizontal (1200×720 px) o vertical (800×1240 px) según la pantalla.
+  const slabMat = new THREE.MeshStandardMaterial({ color: '#0e1706', emissive: '#283a05', emissiveIntensity: 0.6, roughness: 0.15, metalness: 0.2, transparent: true, opacity: 0.42, depthWrite: false });
+  function layoutPanels(portrait) {
+    const [pxW, pxH, s] = portrait ? [800, 1240, 0.0045] : [1200, 720, 0.006];
+    const w = pxW * s, h = pxH * s, cy = (portrait ? 0.45 : 0.6) + h / 2;
+    for (const p of panels) {
+      p.wrap.classList.toggle('portrait', portrait);
+      p.css.scale.setScalar(s);
+      p.group.position.y = cy; p.center.y = cy;
+      p.w = w; p.h = h;
+      if (p.frame) { p.group.remove(p.frame); p.frame.traverse((o) => o.geometry?.dispose()); }
+      const f = new THREE.Group();
+      const hw = w / 2 + 0.15, hh = h / 2 + 0.14;
+      p.slab = new THREE.Mesh(new THREE.BoxGeometry(hw * 2, hh * 2, 0.08), slabMat.clone()); f.add(p.slab);
+      for (const [a, b] of [[[-hw, -hh], [hw, -hh]], [[hw, -hh], [hw, hh]], [[hw, hh], [-hw, hh]], [[-hw, hh], [-hw, -hh]]]) f.add(bar(new V3(a[0], a[1], 0), new V3(b[0], b[1], 0), 0.06, neonMat));
+      f.add(bar(new V3(-hw, -cy + 0.02, 0), new V3(hw, -cy + 0.02, 0), 0.05, neonMat));
+      p.group.add(f); p.frame = f;
+      p.obstacle.a.copy(p.center).addScaledVector(p.along, -hw); p.obstacle.b.copy(p.center).addScaledVector(p.along, hw);
+    }
+  }
 
   // Áreas caminables: cada sala + el paso por cada puerta.
   const rects = ROOMS.map((_, i) => ({ x0: -half + 0.9, x1: half - 0.9, z0: -(i + 1) * D + 0.95, z1: -i * D - 0.95 }));
@@ -434,7 +438,7 @@ function buildInterior() {
   marker.rotation.x = -Math.PI / 2; marker.position.y = 0.03; floorDecals.add(marker);
 
   return {
-    scene, panels, rects, obstacles, marker, mirror,
+    scene, panels, rects, obstacles, marker, mirror, layoutPanels,
     update(t) {
       eyes.forEach((e, i) => (e.material.emissiveIntensity = 3.4 + 0.9 * Math.sin(t * 1.3 + i)));
       doors.forEach((d, i) => (d.light.intensity = (d.k === NWALL - 1 ? 34 : 18) + 3 * Math.sin(t * 1.1 + i)));
@@ -446,6 +450,9 @@ function buildInterior() {
 // ================================================================= Construcción
 const ext = buildExterior();
 const int = buildInterior();
+const wantPortrait = () => innerWidth < innerHeight * 0.9;
+let portraitLayout = wantPortrait();
+int.layoutPanels(portraitLayout);
 let scene = ext.scene;
 let mode = 'exterior'; // exterior | interior | transition
 renderPass.scene = scene;
@@ -465,6 +472,7 @@ applyOrbit();
 const player = { pos: new V3(doorX(0), EYE, -2), yaw: 0, pitch: 0, room: 0, bob: 0 };
 let flight = null;    // recorrido animado entre salas
 let walkTarget = null; // destino del clic en el piso
+let atPanel = null;    // sala cuyo holograma está encuadrado (para reencuadrar al rotar la pantalla)
 const keys = new Set();
 const joy = { x: 0, y: 0 };
 
@@ -492,7 +500,7 @@ function updateWalk(dt) {
   if (flight) return;
   const typing = /INPUT|TEXTAREA|SELECT/.test(document.activeElement?.tagName || '');
   let f = 0, s = 0;
-  if (!typing && overlay.hidden) {
+  if (!typing) {
     if (keys.has('KeyW') || keys.has('ArrowUp')) f += 1;
     if (keys.has('KeyS') || keys.has('ArrowDown')) f -= 1;
     if (keys.has('KeyA')) s -= 1;
@@ -515,6 +523,7 @@ function updateWalk(dt) {
     else { mx = dx / dist; mz = dz / dist; const want = Math.atan2(-dx, -dz); player.yaw += angleDiff(want, player.yaw) * Math.min(1, dt * 3); }
   }
   if (mx || mz) {
+    atPanel = null;
     const ok = tryMove(mx * speed * dt, mz * speed * dt);
     if (!ok) walkTarget = null;
     player.bob += dt * speed * 1.6;
@@ -529,12 +538,24 @@ function applyPlayerCamera() {
   camera.rotation.set(player.pitch, player.yaw, 0);
 }
 
-// Distancia al holograma según el ancho de pantalla, para que quepa entero.
-function panelView(p) {
-  const hfov = 2 * Math.atan(Math.tan(THREE.MathUtils.degToRad(camera.fov) / 2) * camera.aspect);
-  const dist = THREE.MathUtils.clamp(4.1 / Math.tan(hfov / 2), 6.8, 9.4);
-  const v = p.center.clone().addScaledVector(p.normal, dist); v.y = EYE;
-  return v;
+// Encuadre del holograma: ocupa la pantalla entre la barra superior y la interfaz inferior.
+function hudInsets() {
+  const narrow = innerWidth <= 700;
+  return { top: 78, bottom: narrow ? 150 : 96, side: narrow ? 10 : 28 };
+}
+function panelFit(p) {
+  const { top, bottom, side } = hudInsets();
+  const tanV = Math.tan(THREE.MathUtils.degToRad(camera.fov) / 2), tanH = tanV * camera.aspect;
+  const usableV = Math.max(0.3, (innerHeight - top - bottom) / innerHeight);
+  const usableH = (innerWidth - side * 2) / innerWidth;
+  const hw = p.w / 2 + 0.2, hh = p.h / 2 + 0.2;
+  const dist = THREE.MathUtils.clamp(Math.max(hw / (tanH * usableH), hh / (tanV * usableV)), 3.2, 10.2);
+  const view = p.center.clone().addScaledVector(p.normal, dist); view.y = EYE;
+  // Centro del área libre en coordenadas de pantalla (NDC), para inclinar la mirada hacia ahí.
+  const ndcY = 1 - (2 * (top + (innerHeight - top - bottom) / 2)) / innerHeight;
+  const pitch = Math.atan2(p.center.y - EYE, dist) - Math.atan(ndcY * tanV);
+  const yaw = Math.atan2(p.normal.x, p.normal.z);
+  return { view, pitch, yaw };
 }
 
 // Recorrido animado: atraviesa las puertas hasta quedar frente al holograma.
@@ -550,11 +571,9 @@ function flyToRoom(i, instant = false) {
     pts.push(new V3(dx, EYE, zw + 2.4 * step), new V3(dx, EYE, zw - 2.4 * step));
     cur += step;
   }
-  const view = panelView(p);
+  const { view, pitch: wantPitch, yaw: wantYaw } = panelFit(p);
   pts.push(view);
-  const wantYaw = Math.atan2(-(p.center.x - view.x), -(p.center.z - view.z));
-  const wantPitch = Math.atan2(p.center.y - EYE, view.distanceTo(new V3(p.center.x, EYE, p.center.z))) * 0.85;
-  walkTarget = null;
+  walkTarget = null; atPanel = i;
   if (instant || reduceMotion) { player.pos.copy(view); player.yaw = wantYaw; player.pitch = wantPitch; return; }
   const curve = new THREE.CatmullRomCurve3(pts, false, 'centripetal');
   const length = curve.getLength();
@@ -615,14 +634,13 @@ function enterHouse(targetRoom) {
       applyPlayerCamera();
       tween(800, (k) => (fade.style.opacity = 1 - k), () => {
         mode = 'interior';
-        if (targetRoom != null) flyToRoom(targetRoom); else toast('Bienvenido a Casa Cuco');
+        if (targetRoom != null) flyToRoom(targetRoom);
       });
     }));
 }
 function exitHouse() {
   if (mode !== 'interior') return;
-  mode = 'transition'; flight = null; walkTarget = null; keys.clear();
-  closeOverlay();
+  mode = 'transition'; flight = null; walkTarget = null; atPanel = null; keys.clear();
   tween(550, (k) => (fade.style.opacity = k), () => {
     setScene(ext.scene);
     const p1 = new V3(-3.05, 2.2, ext.DEPTH + 6), l1 = new V3(-3.05, 2, 0);
@@ -636,7 +654,7 @@ function exitHouse() {
 
 // ---------------------------------------------------------------- Navegación
 function goTo(id) {
-  closeMenu(); closeOverlay();
+  closeMenu();
   if (id === 'exterior') { if (mode === 'interior') exitHouse(); return; }
   const i = ROOMS.findIndex((r) => r.id === id);
   if (i < 0) return;
@@ -662,24 +680,14 @@ const orbitBtn = $('#orbitBtn');
 function syncOrbitBtn() { orbitBtn.classList.toggle('on', orbit.auto); orbitBtn.textContent = orbit.auto ? 'Pausar órbita' : 'Órbita 360°'; }
 orbitBtn.addEventListener('click', () => { orbit.auto = !orbit.auto; syncOrbitBtn(); });
 
-let toastTimer;
-function toast(msg) { const t = $('#toast'); t.textContent = msg; t.classList.add('show'); clearTimeout(toastTimer); toastTimer = setTimeout(() => t.classList.remove('show'), 2600); }
-
-// Sección a pantalla completa (el mismo HTML del holograma).
-const overlay = $('#overlay');
-$('#sectionBtn').addEventListener('click', () => openOverlay(player.room));
-$('#overlayClose').addEventListener('click', closeOverlay);
-overlay.addEventListener('click', (e) => { if (e.target === overlay) closeOverlay(); });
-function openOverlay(i) {
-  const body = $('#overlayBody');
-  body.innerHTML = '<div class="holo-wrap"><div class="holo"></div></div>';
-  body.querySelector('.holo').appendChild($('#tpl-' + ROOMS[i].id).content.cloneNode(true));
-  overlay.querySelector('.overlay-box').setAttribute('aria-label', ROOMS[i].name);
-  updateClocks();
-  overlay.hidden = false; keys.clear();
-  $('#overlayClose').focus();
-}
-function closeOverlay() { if (!overlay.hidden) { overlay.hidden = true; $('#overlayBody').innerHTML = ''; } }
+// Pantalla completa (si el navegador lo permite).
+const fsBtn = $('#fsBtn');
+if (!document.fullscreenEnabled) fsBtn.hidden = true;
+fsBtn.addEventListener('click', () => {
+  const req = document.fullscreenElement ? document.exitFullscreen() : document.documentElement.requestFullscreen({ navigationUI: 'hide' });
+  req?.catch?.(() => { fsBtn.hidden = true; });
+});
+document.addEventListener('fullscreenchange', () => fsBtn.setAttribute('aria-label', document.fullscreenElement ? 'Salir de pantalla completa' : 'Pantalla completa'));
 
 // Formulario de contacto (sin servidor: prepara el correo y WhatsApp).
 document.addEventListener('submit', (e) => {
@@ -767,7 +775,7 @@ canvas.addEventListener('wheel', (e) => {
 }, { passive: false });
 
 addEventListener('keydown', (e) => {
-  if (e.key === 'Escape') { closeOverlay(); closeMenu(); return; }
+  if (e.key === 'Escape') { closeMenu(); return; }
   if (/INPUT|TEXTAREA|SELECT/.test(e.target.tagName)) return;
   if (mode === 'exterior') {
     if (e.key === 'Enter' && e.target === document.body) enterHouse();
@@ -782,7 +790,6 @@ addEventListener('keydown', (e) => {
   }
   if (mode === 'interior') {
     if (/^Digit[1-5]$/.test(e.code)) { flyToRoom(+e.code.slice(5) - 1); return; }
-    if (e.code === 'KeyF') { openOverlay(player.room); return; }
     if (e.code.startsWith('Arrow') || e.code === 'Space') e.preventDefault();
     keys.add(e.code);
     if (flight && /Key[WASD]|Arrow/.test(e.code)) flight = null;
@@ -856,13 +863,12 @@ function updatePanels(dt) {
 }
 
 // ---------------------------------------------------------------- HUD de sala
+let hudRoom = -1;
 function updateRoomHUD() {
   const r = roomAt(player.pos.z);
-  if (r === player.room && $('#roomTitle').dataset.set) return;
-  player.room = r;
-  $('#roomTitle').dataset.set = '1';
-  $('#roomTitle').textContent = ROOMS[r].name;
-  $('#roomEyebrow').textContent = `Sala 0${r + 1} · ${ROOMS[r].name}`;
+  if (r === player.room && hudRoom === r) return;
+  player.room = r; hudRoom = r;
+  $('#roomLabel').textContent = `Sala 0${r + 1} · ${ROOMS[r].name}`;
   setActive(ROOMS[r].id); setHash(ROOMS[r].id);
 }
 
@@ -897,6 +903,11 @@ addEventListener('resize', () => {
   camera.aspect = innerWidth / innerHeight; camera.fov = fovFor(scene === int.scene); camera.updateProjectionMatrix();
   renderer.setSize(innerWidth, innerHeight); composer.setSize(innerWidth, innerHeight);
   cssRenderer.setSize(innerWidth, innerHeight);
+  if (wantPortrait() !== portraitLayout) { portraitLayout = wantPortrait(); int.layoutPanels(portraitLayout); }
+  if (atPanel != null && !flight && mode === 'interior') {
+    const f = panelFit(int.panels[atPanel]);
+    player.pos.copy(f.view); player.yaw = f.yaw; player.pitch = f.pitch;
+  }
 });
 
 // Enlace directo a una sala (p. ej. index.html#proyectos): entra y viaja hasta ella.
