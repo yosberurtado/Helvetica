@@ -36,14 +36,22 @@ Funciona tal cual en GitHub Pages, Netlify o Vercel (sitio estático).
 
 ## Estructura
 
-- `index.html`: interfaz y el contenido de cada sección (`<template id="tpl-…">`). Edita los textos ahí.
-- `css/style.css`: estilos de la interfaz y de los hologramas.
-- `js/main.js`: escena 3D (exterior, salas, luces, piso reflectante, bloom), caminata, colisiones y navegación.
+- `index.html`: interfaz y contenido de cada sección (`<template id="tpl-…">`), tomado de casacuco.cl.
+- `css/style.css`: estilos con la paleta oficial (#DAFF02, #D9F026, #070707, #151515) y tipografías Labrada, Inter y Troika.
+- `js/main.js`: escena 3D. La casa del exterior es la silueta oficial del logo (vectorizada), con los ojos encendidos,
+  la luna y la "boca" triangular como puerta de entrada.
+- `assets/brand/`: logo, casa con luna, ilustración de manos y favicon oficiales.
+- `assets/proyectos/` y `assets/servicios/`: imágenes oficiales optimizadas.
 - `vendor/three/`: Three.js r160 incluido localmente (licencia MIT).
-- `assets/`: fotos reales de proyectos y servicios (ver `assets/README.md`).
+
+## Pendiente para quedar 100 % igual al sitio
+
+- **Tipografía Troika:** copia `troika.ttf` (está en `wp-content/uploads/2026/08/` del WordPress) en `assets/fonts/`
+  y agrega su `url(...)` en el `@font-face` al inicio de `css/style.css`. Mientras tanto se usa Bowlby One SC.
+- **Imagen de Nosotros:** en el sitio es un fondo (`Sin-titulo-800-x-1000-px-700-x-1000-px.png`) que no venía en el
+  respaldo. Mientras tanto se muestra el logo.
+- **Instagram y YouTube:** en el sitio los íconos no tienen enlace, por eso no se incluyeron.
 
 ## Formulario de contacto
 
-No hay servidor, así que "Enviar" prepara el mensaje y abre el correo
-(`contacto@grupokeipoint.com`) o WhatsApp (+56 9 3393 8347). Para recibirlo directo,
-conecta el formulario a un servicio como Formspree en `js/main.js` (busca `contact-form`).
+No hay servidor, así que "Enviar" abre el correo del visitante con el mensaje para `contacto@grupokeipoint.com`.

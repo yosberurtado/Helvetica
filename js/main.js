@@ -13,7 +13,7 @@ const isTouch = matchMedia('(pointer: coarse)').matches;
 const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
 if (isTouch) document.documentElement.classList.add('touch');
 
-const ACID = 0xd7ff19;
+const ACID = 0xdaff02; // verde oficial de casacuco.cl
 const ROOMS = [
   { id: 'inicio', name: 'Inicio' },
   { id: 'nosotros', name: 'Nosotros' },
@@ -140,7 +140,7 @@ function facetSurface({ u0, u1, v0, v1, cell, amp, bias = 0, wave = 0.6, map, ho
 const beamTex = (() => {
   const t = canvasTex(64, (g, s) => {
     const gr = g.createLinearGradient(0, 0, 0, s);
-    gr.addColorStop(0, 'rgba(235,255,140,.9)'); gr.addColorStop(0.5, 'rgba(200,240,40,.25)'); gr.addColorStop(1, 'rgba(0,0,0,0)');
+    gr.addColorStop(0, 'rgba(240,255,150,.9)'); gr.addColorStop(0.5, 'rgba(218,255,2,.22)'); gr.addColorStop(1, 'rgba(0,0,0,0)');
     g.fillStyle = gr; g.fillRect(0, 0, s, s);
   });
   t.wrapS = t.wrapT = THREE.ClampToEdgeWrapping;
@@ -148,10 +148,10 @@ const beamTex = (() => {
 })();
 const beamMat = new THREE.MeshBasicMaterial({ map: beamTex, transparent: true, opacity: 0.16, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide, fog: false });
 const glowMat = (opacity = 1, tint = 0xffffff) => new THREE.MeshBasicMaterial({
-  map: radialTex([[0, 'rgba(225,255,90,.55)'], [0.45, 'rgba(160,210,20,.18)'], [1, 'rgba(0,0,0,0)']]),
+  map: radialTex([[0, 'rgba(225,255,80,.5)'], [0.45, 'rgba(180,215,10,.16)'], [1, 'rgba(0,0,0,0)']]),
   color: tint, transparent: true, opacity, blending: THREE.AdditiveBlending, depthWrite: false,
 });
-const neonMat = new THREE.MeshStandardMaterial({ color: 0xcfff16, emissive: 0xb6e000, emissiveIntensity: 3.2, roughness: 0.3 });
+const neonMat = new THREE.MeshStandardMaterial({ color: ACID, emissive: ACID, emissiveIntensity: 3, roughness: 0.3 });
 
 function bar(a, b, thick, mat) {
   const len = Math.hypot(b.x - a.x, b.y - a.y, b.z - a.z);
@@ -162,88 +162,97 @@ function bar(a, b, thick, mat) {
 }
 
 // ================================================================= EXTERIOR
+// Silueta oficial del logo de casacuco.cl (vectorizada desde el PNG, en píxeles del logo).
+const LOGO = {
+  house: [[40, 411], [40, 897], [433, 896], [483, 856], [547, 895], [592, 793], [683, 895], [759, 850], [984, 894], [968, 438], [865, 380], [731, 162], [638, 257], [342, 95]],
+  eyes: [
+    [[331, 365], [422, 363], [470, 431], [398, 434], [355, 479], [349, 521], [403, 560], [462, 550], [478, 543], [475, 554], [406, 626], [315, 611], [274, 583], [253, 500], [282, 398]],
+    [[678, 435], [714, 467], [727, 530], [694, 588], [669, 610], [627, 608], [584, 565], [583, 524], [585, 522], [620, 551], [653, 550], [668, 541], [672, 508], [658, 486], [640, 477], [604, 472], [609, 462]],
+  ],
+  // Luna del logo "casa + luna" (otro archivo); se lleva a la misma escala que la casa.
+  moon9: [[741, 42], [666, 72], [659, 82], [659, 85], [700, 89], [719, 98], [736, 125], [732, 163], [714, 174], [675, 175], [638, 144], [634, 144], [635, 190], [682, 238], [733, 240], [759, 217], [797, 150], [782, 78]],
+  mouth: [[547, 895], [592, 793], [683, 895]], // la "boca" triangular: la puerta de entrada
+};
+const LOGO_S = 14 / 945;                                      // 14 m de ancho
+const logoM = ([x, y]) => [(x - 512) * LOGO_S, (897 - y) * LOGO_S];
+const moonPx = ([x, y]) => [40 + (x - 229) * (945 / 465), 897 - (522 - y) * (945 / 465)];
+const shapeFrom = (pts, map = logoM) => new THREE.Shape(pts.map((p) => new THREE.Vector2(...map(p))));
+
 function buildExterior() {
   const scene = new THREE.Scene();
-  scene.background = new THREE.Color('#050604');
-  scene.fog = new THREE.FogExp2('#050604', 0.012);
-  scene.add(new THREE.HemisphereLight(0xe6e9d7, 0x11130d, 1.5));
-  scene.add(new THREE.AmbientLight(0x555b43, 0.4));
+  scene.background = new THREE.Color('#070707');
+  scene.fog = new THREE.FogExp2('#070707', 0.009);
+  scene.add(new THREE.HemisphereLight(0xffffff, 0x151515, 1.35));
+  scene.add(new THREE.AmbientLight(0x4a4a4a, 0.4));
   const point = (x, y, z, color, intensity, distance, shadow = false) => {
     const l = new THREE.PointLight(color, intensity, distance, 2);
     l.position.set(x, y, z); l.castShadow = shadow; scene.add(l); return l;
   };
-  const key = point(-9, 13, 14, 0xf0f1d9, 125, 42, true);
-  key.shadow.mapSize.set(2048, 2048); key.shadow.bias = -0.00025;
-  point(9, 7, 3, ACID, 34, 26); point(-8, 4, -9, 0xaecb38, 22, 26);
+  const key = point(-12, 18, 20, 0xffffff, 260, 60, true);
+  key.shadow.mapSize.set(2048, 2048); key.shadow.bias = -0.0003;
+  point(13, 9, 6, ACID, 40, 30); point(-12, 6, -10, 0xd9f026, 26, 30);
 
-  const floor = new THREE.Mesh(new THREE.PlaneGeometry(240, 240), new THREE.MeshStandardMaterial({ color: '#080a07', roughness: 0.34, metalness: 0.32 }));
-  floor.rotation.x = -Math.PI / 2; floor.position.y = -0.2; floor.receiveShadow = true; scene.add(floor);
-  const glow = new THREE.Mesh(new THREE.PlaneGeometry(34, 34), glowMat(0.5));
-  glow.rotation.x = -Math.PI / 2; glow.position.set(0, -0.17, 4); scene.add(glow);
+  const floor = new THREE.Mesh(new THREE.PlaneGeometry(260, 260), new THREE.MeshStandardMaterial({ color: '#0b0b0b', roughness: 0.32, metalness: 0.35 }));
+  floor.rotation.x = -Math.PI / 2; floor.position.y = -0.02; floor.receiveShadow = true; scene.add(floor);
+  const glow = new THREE.Mesh(new THREE.PlaneGeometry(40, 40), glowMat(0.45));
+  glow.rotation.x = -Math.PI / 2; glow.position.set(0, 0, 6); scene.add(glow);
 
-  // Silueta frontal de la marca extruida como volumen.
-  const DEPTH = 9.2;
-  const stoneTex = stoneTexture('#d8d7cb', 15000); stoneTex.repeat.set(3.5, 3.5);
-  const stone = new THREE.MeshStandardMaterial({ map: stoneTex, bumpMap: stoneTex, bumpScale: 0.05, color: '#dddcd2', roughness: 0.8, metalness: 0.025, side: THREE.DoubleSide });
-  const outlineMat = new THREE.LineBasicMaterial({ color: ACID, transparent: true, opacity: 0.22 });
-  const shape = new THREE.Shape();
-  [[-5.5, 0.05], [-5.45, 3.35], [-4.7, 4.05], [-2.75, 5.12], [-1.15, 8.12], [0.65, 6.12], [2.1, 4.75], [2.8, 5.95], [3.55, 4.25], [5.35, 0.18], [3.8, 0.08], [2.9, 0.92], [1.95, 0.08], [0.98, 0.67], [0.05, 0.05], [-0.88, 0.72], [-1.72, 0.08], [-2.7, 0.48], [-3.55, 0.04]]
-    .forEach(([x, y], i) => (i ? shape.lineTo(x, y) : shape.moveTo(x, y)));
-  shape.closePath();
-  const doorway = new THREE.Path();
-  doorway.moveTo(-4.62, 0.02); doorway.lineTo(-4.62, 3.48); doorway.lineTo(-1.45, 4.55); doorway.lineTo(-1.45, 0.02); doorway.closePath();
-  shape.holes.push(doorway);
-  const houseGeo = new THREE.ExtrudeGeometry(shape, { depth: DEPTH, bevelEnabled: true, bevelSegments: 4, steps: 1, bevelSize: 0.14, bevelThickness: 0.14, curveSegments: 8 });
+  const DEPTH = 9;
+  const stoneTex = stoneTexture('#e6e6e2', 12000); stoneTex.repeat.set(0.25, 0.25);
+  const stone = new THREE.MeshStandardMaterial({ map: stoneTex, bumpMap: stoneTex, bumpScale: 0.04, color: '#e9e9e6', roughness: 0.78, metalness: 0.02, side: THREE.DoubleSide });
+  const outlineMat = new THREE.LineBasicMaterial({ color: ACID, transparent: true, opacity: 0.2 });
+
+  // Casa: silueta del logo con los ojos calados, extruida en profundidad.
+  const shape = shapeFrom(LOGO.house);
+  LOGO.eyes.forEach((e) => shape.holes.push(new THREE.Path(e.map((p) => new THREE.Vector2(...logoM(p))))));
+  const houseGeo = new THREE.ExtrudeGeometry(shape, { depth: DEPTH, bevelEnabled: true, bevelSegments: 3, bevelSize: 0.08, bevelThickness: 0.08 });
   const house = new THREE.Mesh(houseGeo, stone); house.castShadow = house.receiveShadow = true; scene.add(house);
-  const edges = new THREE.LineSegments(new THREE.EdgesGeometry(houseGeo, 32), outlineMat); edges.position.z = 0.008; scene.add(edges);
+  const edges = new THREE.LineSegments(new THREE.EdgesGeometry(houseGeo, 30), outlineMat); scene.add(edges);
 
-  // Cuerno / cola.
-  const tailCurve = new THREE.CatmullRomCurve3([[2.55, 5.75], [3.55, 5.28], [4.72, 5.5], [5.55, 6.38], [5.52, 7.48], [4.7, 8.42], [3.65, 8.12], [3.18, 7.55]].map(([x, y], i) => new V3(x, y, DEPTH + 0.15 - i * 0.01)));
-  const tail = new THREE.Mesh(new THREE.TubeGeometry(tailCurve, 64, 0.62, 8, false), stone);
-  tail.castShadow = tail.receiveShadow = true; scene.add(tail);
-  scene.add(new THREE.LineSegments(new THREE.EdgesGeometry(tail.geometry, 34), outlineMat));
+  // Ojos: luz verde dentro de cada cavidad.
+  const eyeMat = new THREE.MeshStandardMaterial({ color: ACID, emissive: ACID, emissiveIntensity: 2.6, side: THREE.DoubleSide });
+  const eyes = LOGO.eyes.map((e) => {
+    const m = new THREE.Mesh(new THREE.ShapeGeometry(shapeFrom(e)), eyeMat.clone());
+    m.position.z = DEPTH * 0.55; scene.add(m);
+    const c = e.reduce((a, p) => [a[0] + p[0] / e.length, a[1] + p[1] / e.length], [0, 0]);
+    const [cx, cy] = logoM(c);
+    point(cx, cy, DEPTH + 1.4, ACID, 9, 10);
+    return m;
+  });
 
-  // Ojos.
-  const socketMat = new THREE.MeshStandardMaterial({ color: '#030403', roughness: 0.16, metalness: 0.48 });
-  const irisMat = new THREE.MeshStandardMaterial({ color: ACID, emissive: '#b9ff00', emissiveIntensity: 3.2, roughness: 0.18 });
-  const irises = [];
-  for (const [x, y, rot] of [[-0.8, 4.65, -0.12], [2.05, 4.18, 0.18]]) {
-    const socket = new THREE.Mesh(new THREE.SphereGeometry(1, 36, 28), socketMat);
-    socket.position.set(x, y, DEPTH + 0.12); socket.scale.set(0.7, 0.44, 0.17); socket.rotation.z = rot; scene.add(socket);
-    const iris = new THREE.Mesh(new THREE.SphereGeometry(0.18, 28, 20), irisMat.clone());
-    iris.position.set(x, y, DEPTH + 0.29); iris.scale.set(1.05, 0.9, 0.48); scene.add(iris); irises.push(iris);
-    point(x, y, DEPTH + 1, ACID, 4.8, 8);
-  }
-  // Umbral luminoso: la puerta por donde se entra.
-  const frameMat = new THREE.MeshStandardMaterial({ color: 0xcfff16, emissive: 0x9bb800, emissiveIntensity: 2.8, roughness: 0.25, metalness: 0.2 });
+  // Luna.
+  const moonGeo = new THREE.ExtrudeGeometry(shapeFrom(LOGO.moon9, (p) => logoM(moonPx(p))), { depth: 1.4, bevelEnabled: true, bevelSegments: 2, bevelSize: 0.06, bevelThickness: 0.06 });
+  const moon = new THREE.Mesh(moonGeo, stone); moon.position.z = DEPTH - 4.2; moon.castShadow = true; scene.add(moon);
+  const moonEdges = new THREE.LineSegments(new THREE.EdgesGeometry(moonGeo, 30), outlineMat); moonEdges.position.copy(moon.position); scene.add(moonEdges);
+
+  // Boca triangular = puerta: neón en el borde, túnel iluminado y velo de luz (blanco del clic).
+  const [A, B, C] = LOGO.mouth.map(logoM);
   const doorParts = [];
-  const box = (x, y, z, w, h, d) => { const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), frameMat); m.position.set(x, y, z); scene.add(m); doorParts.push(m); };
-  for (const z of [DEPTH + 0.16, DEPTH - 4.0]) { box(-4.58, 1.82, z, 0.09, 3.62, 0.12); box(-1.5, 2.28, z, 0.09, 4.5, 0.12); box(-3.04, 4.05, z, 3.16, 0.09, 0.12); }
-  const tunnelMat = new THREE.MeshStandardMaterial({ color: '#090b07', roughness: 0.58, metalness: 0.24, emissive: '#333d0b', emissiveIntensity: 0.15, side: THREE.DoubleSide });
-  const passage = new THREE.Mesh(new THREE.BoxGeometry(3.12, 0.07, DEPTH), tunnelMat); passage.position.set(-3.05, 0.02, DEPTH / 2); scene.add(passage);
-  // Velo de luz en el umbral (también es el blanco del clic para entrar).
-  const veil = new THREE.Mesh(new THREE.PlaneGeometry(3.05, 4.2), new THREE.MeshBasicMaterial({ map: beamTex, color: 0xeaff8a, transparent: true, opacity: 0.22, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide }));
-  veil.position.set(-3.04, 2.1, DEPTH - 3.9); scene.add(veil); doorParts.push(veil);
-  const doorGlow = point(-3, 2.2, DEPTH - 3.8, 0xcfff16, 13, 12);
+  for (const z of [DEPTH + 0.1, 0.0]) {
+    for (const [p, q] of [[A, B], [B, C]]) { const m = bar(new V3(p[0], Math.max(p[1], 0.03), z), new V3(q[0], Math.max(q[1], 0.03), z), 0.07, neonMat); scene.add(m); doorParts.push(m); }
+  }
+  const sill = bar(new V3(A[0], 0.03, DEPTH + 0.1), new V3(C[0], 0.03, DEPTH + 0.1), 0.05, neonMat); scene.add(sill);
+  const veilShape = new THREE.Shape([new THREE.Vector2(A[0], 0), new THREE.Vector2(B[0], B[1]), new THREE.Vector2(C[0], 0)]);
+  const veil = new THREE.Mesh(new THREE.ShapeGeometry(veilShape), new THREE.MeshBasicMaterial({ color: 0xf3ff9e, transparent: true, opacity: 0.5, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide }));
+  veil.position.z = DEPTH * 0.5; scene.add(veil); doorParts.push(veil);
+  const doorGlow = point(B[0], 0.8, DEPTH * 0.5, ACID, 16, 12);
+  const mouthX = B[0];
   const dotMat = new THREE.MeshBasicMaterial({ color: ACID });
-  for (let z = DEPTH - 0.4; z > 0.3; z -= 0.43) { const d = new THREE.Mesh(new THREE.OctahedronGeometry(0.045, 0), dotMat); d.position.set(-3.05, 0.09, z); scene.add(d); }
+  for (let z = DEPTH + 6; z > DEPTH + 0.4; z -= 0.45) { const d = new THREE.Mesh(new THREE.OctahedronGeometry(0.05, 0), dotMat); d.position.set(mouthX, 0.06, z); scene.add(d); }
 
   // Órbita punteada.
   const orbitPts = [];
-  for (let i = 0; i < 280; i++) { const a = (i / 280) * Math.PI * 2; orbitPts.push(new V3(Math.cos(a) * 9.2, 0.04, 4 + Math.sin(a) * 11.2)); }
-  const orbitLine = new THREE.LineLoop(new THREE.BufferGeometry().setFromPoints(orbitPts), new THREE.LineDashedMaterial({ color: ACID, dashSize: 0.1, gapSize: 0.18, transparent: true, opacity: 0.44 }));
+  for (let i = 0; i < 300; i++) { const a = (i / 300) * Math.PI * 2; orbitPts.push(new V3(Math.cos(a) * 12, 0.03, 4.5 + Math.sin(a) * 13)); }
+  const orbitLine = new THREE.LineLoop(new THREE.BufferGeometry().setFromPoints(orbitPts), new THREE.LineDashedMaterial({ color: ACID, dashSize: 0.12, gapSize: 0.2, transparent: true, opacity: 0.4 }));
   orbitLine.computeLineDistances(); scene.add(orbitLine);
-
-  // Polvo flotante.
-  scene.add(makeDust(500, [-16, 16], [0, 10], [-10, 20]));
+  scene.add(makeDust(400, [-20, 20], [0, 16], [-12, 24]));
 
   return {
-    scene, DEPTH, doorParts,
-    door: new V3(-3.05, 1.8, DEPTH),
+    scene, DEPTH, doorParts, mouthX, mouthTop: B[1],
     update(t) {
-      irises.forEach((e, i) => (e.material.emissiveIntensity = 2.8 + 0.6 * Math.sin(t * 1.5 + i * 0.65)));
-      doorGlow.intensity = 11 + 2 * Math.sin(t * 1.1);
-      veil.material.opacity = 0.18 + 0.06 * Math.sin(t * 2);
+      eyes.forEach((e, i) => (e.material.emissiveIntensity = 2.3 + 0.7 * Math.sin(t * 1.4 + i * 0.7)));
+      doorGlow.intensity = 14 + 3 * Math.sin(t * 1.1);
+      veil.material.opacity = 0.42 + 0.1 * Math.sin(t * 2);
     },
   };
 }
@@ -252,7 +261,7 @@ function makeDust(n, [x0, x1], [y0, y1], [z0, z1]) {
   const g = new THREE.BufferGeometry(), p = new Float32Array(n * 3);
   for (let i = 0; i < n; i++) { p[i * 3] = x0 + Math.random() * (x1 - x0); p[i * 3 + 1] = y0 + Math.random() * (y1 - y0); p[i * 3 + 2] = z0 + Math.random() * (z1 - z0); }
   g.setAttribute('position', new THREE.BufferAttribute(p, 3));
-  const pts = new THREE.Points(g, new THREE.PointsMaterial({ color: 0xe9ff9a, size: 0.035, transparent: true, opacity: 0.55, blending: THREE.AdditiveBlending, depthWrite: false }));
+  const pts = new THREE.Points(g, new THREE.PointsMaterial({ color: 0xf6fe98, size: 0.035, transparent: true, opacity: 0.45, blending: THREE.AdditiveBlending, depthWrite: false }));
   pts.userData.dust = true;
   return pts;
 }
@@ -268,13 +277,13 @@ const doorPoly = (dx, e = 0) => [[dx - DOOR_W - e, -1], [dx + DOOR_W + e, -1], [
 
 function buildInterior() {
   const scene = new THREE.Scene();
-  scene.background = new THREE.Color('#040503');
-  scene.fog = new THREE.FogExp2('#040503', 0.015);
-  scene.add(new THREE.HemisphereLight(0xdfe6c4, 0x0b0d08, 0.32));
+  scene.background = new THREE.Color('#070707');
+  scene.fog = new THREE.FogExp2('#070707', 0.014);
+  scene.add(new THREE.HemisphereLight(0xffffff, 0x151515, 0.42));
 
-  const wallTex = stoneTexture('#c9c8b8'); wallTex.repeat.set(1, 1);
-  const wallMat = new THREE.MeshStandardMaterial({ map: wallTex, bumpMap: wallTex, bumpScale: 0.22, color: '#aaa99a', roughness: 0.82, metalness: 0.02, side: THREE.DoubleSide });
-  const darkWallMat = wallMat.clone(); darkWallMat.color.set('#8d8d7e');
+  const wallTex = stoneTexture('#cfcfcc'); wallTex.repeat.set(1, 1);
+  const wallMat = new THREE.MeshStandardMaterial({ map: wallTex, bumpMap: wallTex, bumpScale: 0.22, color: '#b4b4b1', roughness: 0.82, metalness: 0.02, side: THREE.DoubleSide });
+  const darkWallMat = wallMat.clone(); darkWallMat.color.set('#8e8e8b');
   const len = NWALL - 1;
   const zEnd = -len * D;
 
@@ -294,7 +303,7 @@ function buildInterior() {
 
   // Paredes transversales con puerta en forma de casa.
   const doors = [];
-  const ringMat = wallMat.clone(); ringMat.color.set('#c4c3b1');
+  const ringMat = wallMat.clone(); ringMat.color.set('#c9c9c6');
   for (let k = 0; k < NWALL; k++) {
     const zw = -k * D, dx = doorX(k), hole = doorPoly(dx, 0.12);
     scene.add(new THREE.Mesh(facetSurface({
@@ -318,13 +327,13 @@ function buildInterior() {
       // Portal de luz: salida al exterior (k=0) o luz de fondo de la última sala.
       const portalShape = new THREE.Shape(P.map(([x, y]) => new THREE.Vector2(x, y)));
       const portal = new THREE.Mesh(new THREE.ShapeGeometry(portalShape), new THREE.MeshBasicMaterial({
-        color: exit ? 0x9fbf3a : 0xeaff9a, map: beamTex, transparent: true, opacity: exit ? 0.55 : 0.95, side: THREE.DoubleSide, fog: false,
+        color: exit ? 0xb8d60a : 0xf6fe98, map: beamTex, transparent: true, opacity: exit ? 0.55 : 0.95, side: THREE.DoubleSide, fog: false,
       }));
       portal.position.z = zw + (exit ? 0.35 : 0.1);
       if (!exit) portal.material.blending = THREE.AdditiveBlending;
       scene.add(portal);
     }
-    const l = new THREE.PointLight(0xdcff5a, sealed ? 34 : 18, 14, 2); l.position.set(dx, 2.4, zw + (exit ? -1 : 0)); scene.add(l);
+    const l = new THREE.PointLight(0xe8ff70, sealed ? 30 : 16, 14, 2); l.position.set(dx, 2.4, zw + (exit ? -1 : 0)); scene.add(l);
     doors.push({ k, zw, dx, light: l });
   }
 
@@ -336,11 +345,11 @@ function buildInterior() {
   });
   mirror.rotation.x = -Math.PI / 2; mirror.position.set(0, 0, zEnd / 2); scene.add(mirror);
   const concrete = canvasTex(512, (g, s) => {
-    g.fillStyle = '#1a1c15'; g.fillRect(0, 0, s, s);
-    for (let i = 0; i < 26000; i++) { const v = Math.random() * 60; g.fillStyle = `rgba(${v},${v + 4},${v},${Math.random() * 0.35})`; g.fillRect(Math.random() * s, Math.random() * s, 2, 2); }
+    g.fillStyle = '#18181a'; g.fillRect(0, 0, s, s);
+    for (let i = 0; i < 26000; i++) { const v = Math.random() * 60; g.fillStyle = `rgba(${v},${v},${v},${Math.random() * 0.35})`; g.fillRect(Math.random() * s, Math.random() * s, 2, 2); }
   }, 1);
   concrete.repeat.set(floorW / 6, floorD / 6);
-  const overlay = new THREE.Mesh(new THREE.PlaneGeometry(floorW, floorD), new THREE.MeshStandardMaterial({ map: concrete, color: '#22261a', roughness: 0.55, metalness: 0.1, transparent: true, opacity: 0.66 }));
+  const overlay = new THREE.Mesh(new THREE.PlaneGeometry(floorW, floorD), new THREE.MeshStandardMaterial({ map: concrete, color: '#202020', roughness: 0.55, metalness: 0.1, transparent: true, opacity: 0.64 }));
   overlay.rotation.x = -Math.PI / 2; overlay.position.set(0, 0.004, zEnd / 2); scene.add(overlay);
   const floorDecals = new THREE.Group(); scene.add(floorDecals);
   const hideInMirror = [overlay, floorDecals];
@@ -357,8 +366,8 @@ function buildInterior() {
 
   // Ojos del techo con haz de luz, cuernos y luz de cada sala.
   const eyeDark = new THREE.MeshStandardMaterial({ color: '#040503', roughness: 0.25, metalness: 0.5 });
-  const eyeLit = new THREE.MeshStandardMaterial({ color: ACID, emissive: 0xc8ff00, emissiveIntensity: 4 });
-  const hornMat = wallMat.clone(); hornMat.flatShading = true; hornMat.color.set('#b4b3a3');
+  const eyeLit = new THREE.MeshStandardMaterial({ color: ACID, emissive: ACID, emissiveIntensity: 4 });
+  const hornMat = wallMat.clone(); hornMat.flatShading = true; hornMat.color.set('#d6d6d3');
   const eyes = [], obstacles = [], panels = [];
   ROOMS.forEach((room, i) => {
     const z0 = -i * D, zc = z0 - D / 2;
@@ -374,13 +383,12 @@ function buildInterior() {
       const beam = new THREE.Mesh(new THREE.ConeGeometry(2.3, y, 40, 1, true), beamMat); beam.position.set(ex, y / 2, ez); scene.add(beam);
       const pool = new THREE.Mesh(new THREE.PlaneGeometry(5, 5), glowMat(0.4)); pool.rotation.x = -Math.PI / 2; pool.position.set(ex, 0.01, ez); floorDecals.add(pool);
     }
-    const lamp = new THREE.PointLight(0xf1f4e0, 26, 26, 2); lamp.position.set(0, H + 1, zc); scene.add(lamp);
+    const lamp = new THREE.PointLight(0xffffff, 30, 26, 2); lamp.position.set(0, H + 1, zc); scene.add(lamp);
 
-    // Cuerno en media luna (Nosotros y Contacto, como en las referencias).
+    // Luna del logo flotando en lo alto (Nosotros y Contacto).
     if (i === 1 || i === 4) {
-      const cx = nextDx * 1.55, cy = H + 1.2, cz = z0 - D + 3;
-      const pts = []; for (let a = 0; a <= 7; a++) { const t = -0.6 + (a / 7) * 3.4; pts.push(new V3(cx + Math.cos(t) * 1.9 * Math.sign(cx), cy + Math.sin(t) * 1.9, cz)); }
-      const horn = new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts), 24, 0.55, 6, false), hornMat); scene.add(horn);
+      const moon = new THREE.Mesh(new THREE.ExtrudeGeometry(shapeFrom(LOGO.moon9, (p) => { const [x, y] = moonPx(p); return [(x - 1028) * 0.0075, (180 - y) * 0.0075]; }), { depth: 0.5, bevelEnabled: false }), hornMat);
+      moon.position.set(nextDx * 1.35, H + 0.2, z0 - D + 3.2); moon.rotation.y = nextDx > 0 ? -0.5 : 0.5; scene.add(moon);
     }
 
     // Holograma: panel de vidrio con neón + la sección web en vivo (CSS3D).
@@ -441,7 +449,7 @@ function buildInterior() {
     scene, panels, rects, obstacles, marker, mirror, layoutPanels,
     update(t) {
       eyes.forEach((e, i) => (e.material.emissiveIntensity = 3.4 + 0.9 * Math.sin(t * 1.3 + i)));
-      doors.forEach((d, i) => (d.light.intensity = (d.k === NWALL - 1 ? 34 : 18) + 3 * Math.sin(t * 1.1 + i)));
+      doors.forEach((d, i) => (d.light.intensity = (d.k === NWALL - 1 ? 30 : 16) + 3 * Math.sin(t * 1.1 + i)));
       beamMat.opacity = 0.1 + 0.025 * Math.sin(t * 0.9);
     },
   };
@@ -459,8 +467,8 @@ renderPass.scene = scene;
 
 // ---------------------------------------------------------------- Cámara exterior (órbita)
 const portrait = innerWidth < innerHeight;
-const ORBIT0 = { az: -0.32, el: 0.31, r: portrait ? 34 : 23 };
-const orbit = { target: new V3(0, portrait ? 4.6 : 3.9, 4.2), ...ORBIT0, auto: false };
+const ORBIT0 = { az: -0.38, el: 0.24, r: portrait ? 50 : 32 };
+const orbit = { target: new V3(portrait ? 2 : 0.6, portrait ? 6.4 : 5.2, 4.5), ...ORBIT0, auto: false };
 function orbitPos(o = orbit, out = new V3()) {
   const ce = Math.cos(o.el);
   return out.set(o.target.x + Math.sin(o.az) * o.r * ce, o.target.y + Math.sin(o.el) * o.r, o.target.z + Math.cos(o.az) * o.r * ce);
@@ -625,7 +633,7 @@ function enterHouse(targetRoom) {
   if (mode !== 'exterior') return;
   mode = 'transition'; orbit.auto = false; syncOrbitBtn();
   const p0 = camera.position.clone(), l0 = orbit.target.clone();
-  const p1 = new V3(-3.05, 1.9, ext.DEPTH + 7.5), l1 = new V3(-3.05, 1.9, 0), p2 = new V3(-3.05, 1.8, ext.DEPTH - 3.4);
+  const mx = ext.mouthX, p1 = new V3(mx, 1.0, ext.DEPTH + 8), l1 = new V3(mx, 0.75, 0), p2 = new V3(mx, 0.65, ext.DEPTH * 0.45);
   const look = new V3();
   tween(1500, (k) => { const e = ease(k); camera.position.lerpVectors(p0, p1, e); camera.lookAt(look.lerpVectors(l0, l1, e)); }, () =>
     tween(1300, (k) => { camera.position.lerpVectors(p1, p2, k * k); camera.lookAt(l1); fade.style.opacity = Math.max(0, (k - 0.4) / 0.6); }, () => {
@@ -643,7 +651,7 @@ function exitHouse() {
   mode = 'transition'; flight = null; walkTarget = null; atPanel = null; keys.clear();
   tween(550, (k) => (fade.style.opacity = k), () => {
     setScene(ext.scene);
-    const p1 = new V3(-3.05, 2.2, ext.DEPTH + 6), l1 = new V3(-3.05, 2, 0);
+    const p1 = new V3(ext.mouthX, 1.2, ext.DEPTH + 7), l1 = new V3(ext.mouthX, 1, 0);
     orbit.az = ORBIT0.az; orbit.el = ORBIT0.el; orbit.r = ORBIT0.r;
     const p2 = orbitPos(), look = new V3();
     camera.position.copy(p1); camera.lookAt(l1);
@@ -689,32 +697,21 @@ fsBtn.addEventListener('click', () => {
 });
 document.addEventListener('fullscreenchange', () => fsBtn.setAttribute('aria-label', document.fullscreenElement ? 'Salir de pantalla completa' : 'Pantalla completa'));
 
-// Formulario de contacto (sin servidor: prepara el correo y WhatsApp).
+// Formulario de contacto: sin servidor propio, prepara el correo a contacto@grupokeipoint.com.
 document.addEventListener('submit', (e) => {
   const form = e.target.closest('.contact-form');
   if (!form) return;
   e.preventDefault();
   const status = form.querySelector('.form-status');
   const data = Object.fromEntries(new FormData(form));
-  const missing = ['nombre', 'email', 'mensaje'].filter((k) => !String(data[k] || '').trim());
-  if (missing.length) { status.textContent = 'Completa ' + missing.join(', ') + ' para enviar.'; return; }
+  const labels = { name: 'nombre', email: 'email', message: 'mensaje' };
+  const missing = Object.keys(labels).filter((k) => !String(data[k] || '').trim());
+  if (missing.length) { status.textContent = 'Completa ' + missing.map((k) => labels[k]).join(', ') + ' para enviar.'; return; }
   if (!/^\S+@\S+\.\S+$/.test(data.email)) { status.textContent = 'Revisa el email: falta la @ o el dominio.'; return; }
-  const text = `Hola Casa Cuco, soy ${data.nombre} (${data.email}).\n\n${data.mensaje}`;
-  const mail = `mailto:contacto@grupokeipoint.com?subject=${encodeURIComponent('Idea para Casa Cuco · ' + data.nombre)}&body=${encodeURIComponent(text)}`;
-  const wa = `https://wa.me/56933938347?text=${encodeURIComponent(text)}`;
-  status.innerHTML = `Mensaje listo. <a href="${mail}">Abrir en tu correo</a> o <a href="${wa}" target="_blank" rel="noopener">enviarlo por WhatsApp</a>. Si no se abre, escríbenos a contacto@grupokeipoint.com.`;
+  const mail = `mailto:contacto@grupokeipoint.com?subject=${encodeURIComponent('Casa Cuco · ' + data.name)}&body=${encodeURIComponent(`${data.message}\n\n${data.name} · ${data.email}`)}`;
+  status.innerHTML = `Abrimos tu correo con el mensaje listo. Si no se abre, <a href="${mail}">haz clic aquí</a> o escribe a contacto@grupokeipoint.com.`;
   try { location.href = mail; } catch { /* el enlace queda visible */ }
 });
-
-// Reloj "en vivo" de cada holograma (hora de Santiago de Chile).
-function updateClocks() {
-  let s;
-  try { s = new Intl.DateTimeFormat('es-CL', { hour: '2-digit', minute: '2-digit', hourCycle: 'h23', timeZone: 'America/Santiago' }).format(new Date()); }
-  catch { s = new Date().toTimeString().slice(0, 5); }
-  const panelClocks = int.panels.flatMap((p) => [...p.wrap.querySelectorAll('.clock')]);
-  [...document.querySelectorAll('.clock'), ...panelClocks].forEach((c) => (c.textContent = s));
-}
-updateClocks(); setInterval(updateClocks, 15000);
 
 // ---------------------------------------------------------------- Entrada: puntero, rueda, teclado
 const raycaster = new THREE.Raycaster();
@@ -767,7 +764,7 @@ function handleClick(e) {
 }
 canvas.addEventListener('wheel', (e) => {
   e.preventDefault();
-  if (mode === 'exterior') orbit.r = THREE.MathUtils.clamp(orbit.r + e.deltaY * 0.018, 11, 40);
+  if (mode === 'exterior') orbit.r = THREE.MathUtils.clamp(orbit.r + e.deltaY * 0.022, 16, 58);
   else if (mode === 'interior' && !flight) {
     const step = THREE.MathUtils.clamp(-e.deltaY * 0.01, -1.2, 1.2);
     tryMove(-Math.sin(player.yaw) * step, -Math.cos(player.yaw) * step);
@@ -783,8 +780,8 @@ addEventListener('keydown', (e) => {
     if (e.key === 'ArrowRight') orbit.az -= 0.08;
     if (e.key === 'ArrowUp') orbit.el = Math.min(1, orbit.el + 0.06);
     if (e.key === 'ArrowDown') orbit.el = Math.max(-0.05, orbit.el - 0.06);
-    if (e.key === '+' || e.key === '=') orbit.r = Math.max(11, orbit.r - 1);
-    if (e.key === '-') orbit.r = Math.min(36, orbit.r + 1);
+    if (e.key === '+' || e.key === '=') orbit.r = Math.max(16, orbit.r - 1);
+    if (e.key === '-') orbit.r = Math.min(58, orbit.r + 1);
     if (e.key === 'Home') { Object.assign(orbit, ORBIT0); orbit.auto = false; syncOrbitBtn(); }
     return;
   }
@@ -824,16 +821,16 @@ function drawMinimap() {
   ROOMS.forEach((r, i) => {
     const x0 = mmX(-i * D), x1 = mmX(-(i + 1) * D), y0 = mmY(-W / 2), y1 = mmY(W / 2);
     const on = i === player.room;
-    mg.fillStyle = on ? '#d7ff1926' : '#ffffff08'; mg.fillRect(x0 + 1, y0, x1 - x0 - 2, y1 - y0);
-    mg.strokeStyle = on ? '#d7ff19' : '#d7ff1955'; mg.lineWidth = 1; mg.strokeRect(x0 + 1.5, y0 + 0.5, x1 - x0 - 3, y1 - y0 - 1);
-    mg.fillStyle = on ? '#d7ff19' : '#b7bba6'; mg.font = '9px ui-monospace,monospace'; mg.textAlign = 'center';
+    mg.fillStyle = on ? '#daff0226' : '#ffffff08'; mg.fillRect(x0 + 1, y0, x1 - x0 - 2, y1 - y0);
+    mg.strokeStyle = on ? '#daff02' : '#daff0255'; mg.lineWidth = 1; mg.strokeRect(x0 + 1.5, y0 + 0.5, x1 - x0 - 3, y1 - y0 - 1);
+    mg.fillStyle = on ? '#daff02' : '#a4a4a4'; mg.font = '9px ui-monospace,monospace'; mg.textAlign = 'center';
     mg.fillText('0' + (i + 1), (x0 + x1) / 2, MMH - 7);
   });
   const p = int.panels[player.room];
-  if (p) { mg.fillStyle = '#d7ff19aa'; mg.fillRect(mmX(p.center.z) - 1, mmY(p.center.x) - 6, 2, 12); }
+  if (p) { mg.fillStyle = '#daff02aa'; mg.fillRect(mmX(p.center.z) - 1, mmY(p.center.x) - 6, 2, 12); }
   const px = mmX(player.pos.z), py = mmY(player.pos.x);
   const fx = -Math.sin(player.yaw), fz = -Math.cos(player.yaw);
-  mg.fillStyle = '#d7ff19';
+  mg.fillStyle = '#daff02';
   mg.beginPath(); mg.arc(px, py, 3, 0, Math.PI * 2); mg.fill();
   mg.strokeStyle = '#f4f4ea'; mg.beginPath(); mg.moveTo(px, py); mg.lineTo(px - fz * 9, py + fx * 9); mg.stroke();
 }
@@ -868,7 +865,7 @@ function updateRoomHUD() {
   const r = roomAt(player.pos.z);
   if (r === player.room && hudRoom === r) return;
   player.room = r; hudRoom = r;
-  $('#roomLabel').textContent = `Sala 0${r + 1} · ${ROOMS[r].name}`;
+  $('#roomLabel').textContent = ROOMS[r].name;
   setActive(ROOMS[r].id); setHash(ROOMS[r].id);
 }
 
@@ -895,7 +892,7 @@ function frame(now) {
   }
   composer.render();
   if (scene === int.scene) cssRenderer.render(int.scene, camera);
-  if (!booted) { booted = true; updateClocks(); setTimeout(() => $('#loading').classList.add('off'), 350); }
+  if (!booted) { booted = true; setTimeout(() => $('#loading').classList.add('off'), 350); }
 }
 requestAnimationFrame(frame);
 
