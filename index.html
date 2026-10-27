@@ -4,8 +4,8 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#070707">
-<title>Casa Cuco</title>
-<meta name="description" content="Casa Cuco. Creamos soluciones integrales para ideas y desafíos únicos.">
+<title>Casa Cuco | Estudio de desarrollo creativo en Chile</title>
+<meta name="description" content="Creamos historias, personajes y universos narrativos para marcas e instituciones. Desarrollo creativo, storytelling y creatividad sin miedo.">
 <link rel="icon" href="assets/brand/favicon-32.png" sizes="32x32">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -26,16 +26,16 @@
   <symbol id="cuco-luna" viewBox="227 40 573 485"><path fill="currentColor" d="M229 283L229 522L422 522L446 503L479 521L501 472L546 521L584 499L694 521L686 296L635 267L570 161L523 207L377 128Z M741 42L666 72L659 82L659 85L700 89L719 98L736 125L732 163L714 174L675 175L638 144L634 144L635 190L682 238L733 240L759 217L797 150L782 78Z"/></symbol>
 </svg>
 
-<canvas id="world" aria-label="Casa Cuco en 3D"></canvas>
+
+<canvas id="world" role="img" aria-label="Casa Cuco, estudio de desarrollo creativo especializado en historias y personajes."></canvas>
 <div id="css-layer"></div>
 <div class="vignette" aria-hidden="true"></div>
 
 <header class="topbar">
-  <a class="brand" href="#" data-go="exterior" aria-label="Casa Cuco, volver al exterior">
+  <a class="brand" href="#" data-go="exterior" aria-label="Casa Cuco">
     <img src="assets/brand/logo-casa-cuco.png" alt="Casa Cuco" width="900" height="410">
   </a>
-  <nav class="nav" id="nav" aria-label="Secciones">
-    <button type="button" data-go="exterior">Exterior</button>
+  <nav class="nav" id="nav" aria-label="Menú principal">
     <button type="button" data-go="inicio">Inicio</button>
     <button type="button" data-go="nosotros">Nosotros</button>
     <button type="button" data-go="proyectos">Proyectos</button>
@@ -49,178 +49,284 @@
   </div>
 </header>
 
-<!-- Interfaz del exterior -->
+<!-- Exterior: pantalla inicial, antes de ingresar -->
 <section class="ext-ui" id="extUI">
   <div class="caption">
-    <p class="eyebrow">Casa Cuco</p>
+    <p class="eyebrow">CASA CUCO<br><span class="eyebrow-sub">Estudio de desarrollo creativo</span></p>
     <h1>Pase,<br><span class="acid">sin miedo.</span></h1>
+    <p class="lede">Bienvenido a una casa donde las ideas se convierten en historias extraordinarias.</p>
     <div class="ext-actions">
       <button type="button" class="btn-solid" id="enterBtn">Entrar a la casa</button>
-      <button type="button" class="btn-ghost" id="orbitBtn">Órbita 360°</button>
+      <button type="button" class="btn-ghost" id="orbitBtn">Explorar 360°</button>
     </div>
   </div>
-  <p class="hint" id="extHint"><b>Arrastra</b> girar · <b>Rueda</b> acercar · <b>Clic en la puerta</b> entrar</p>
 </section>
 
-<!-- Interfaz del interior -->
+<!-- Interior: controles mínimos -->
 <section class="int-ui" id="intUI" hidden>
-  <div class="room-bar">
-    <p class="eyebrow" id="roomLabel">Inicio</p>
-    <button type="button" class="btn-ghost" id="exitBtn">Salir al exterior</button>
-  </div>
   <div class="map-box">
-    <canvas id="minimap" width="240" height="64" aria-label="Plano de la casa. Toca una sala para ir."></canvas>
-    <p class="hint" id="intHint"><b>W A S D</b> caminar · <b>Arrastra</b> mirar · <b>Clic en el piso</b> ir ahí · <b>1–5</b> salas</p>
+    <canvas id="minimap" width="240" height="64" aria-hidden="true"></canvas>
   </div>
-  <div class="joy" id="joy" aria-hidden="true"><div class="joy-knob" id="joyKnob"></div></div>
+  <p class="tip" id="tip" aria-live="polite" hidden></p>
 </section>
 
 <div class="fade" id="fade" aria-hidden="true"></div>
 <div class="loading" id="loading"><svg class="loading-mark" aria-hidden="true"><use href="#cuco"/></svg></div>
 
 <!--
-  SECCIONES · Contenido oficial de casacuco.cl. Cada <template> se proyecta como holograma en su sala
-  (formato horizontal en PC, vertical en móvil).
+  CONTENIDO · Versión 2.0 del documento maestro de contenidos (octubre 2026).
+  Cada <section> se proyecta como holograma en su sala. Además queda en el HTML
+  para que los buscadores lo lean sin depender de la vista 3D.
 -->
-<template id="tpl-inicio">
+<main id="contenido" class="sr-content" inert>
+
+<section id="sec-inicio" data-room="inicio">
   <div class="holo-in hero">
     <div class="hero-grid">
       <div class="hero-copy">
-        <h2 class="display">Creamos soluciones integrales para ideas y desafíos únicos.</h2>
-        <h2 class="display acid">experiencias que conectan con la audiencia.</h2>
+        <h2 class="display">Para desafíos únicos, historias extraordinarias.</h2>
+        <p class="sub">Somos un estudio de desarrollo creativo. Creamos historias, personajes y experiencias que conectan con las personas, fortalecen marcas e impulsan nuevas oportunidades de crecimiento.</p>
         <a class="btn-outline" href="#contacto" data-go="contacto">Cuéntanos tu idea</a>
       </div>
       <img class="hero-mark" src="assets/brand/casa-luna.png" alt="" width="571" height="482">
     </div>
     <div class="looking">
-      <p class="kicker">¿Me estabas buscando?</p>
+      <h2 class="kicker">¿Qué podemos crear juntos?</h2>
       <ul class="dots">
-        <li>Comunicación estratégica</li>
-        <li>Relatos y personajes</li>
-        <li>Contenidos audiovisuales</li>
-        <li>Plataformas de contenido</li>
+        <li>Estrategia y desarrollo creativo</li>
+        <li>Historias y personajes</li>
+        <li>Universos narrativos y contenidos</li>
+        <li>Experiencias y plataformas creativas</li>
       </ul>
     </div>
   </div>
-</template>
+</section>
 
-<template id="tpl-nosotros">
+<section id="sec-nosotros" data-room="nosotros">
   <div class="holo-in">
     <p class="slash">/ Nosotros /</p>
     <div class="about-grid">
       <figure class="about-art"><svg aria-hidden="true"><use href="#cuco"/></svg></figure>
       <div class="about-copy">
-        <h3 class="display">Creatividad sin miedo</h3>
-        <p>Es hora de crear nuevas leyendas y desmitificar lo incorrecto.</p>
-        <p>No buscamos presencia, buscamos permanencia. Queremos que tu caso inspire y se convierta en una experiencia que la gente quiera volver a vivir.</p>
-        <p>Trabajamos como comunicadores, diseñadores y narradores, integrando comunicación estratégica, metodologías ágiles, pensamiento de diseño y relato.</p>
-        <a class="btn-bar" href="#contacto" data-go="contacto">Conversar con nosotros</a>
+        <h2 class="display">Creatividad sin miedo.</h2>
+        <div class="about-block">
+          <p>Creemos que las grandes historias comienzan con una pregunta, una idea o un desafío que merece una respuesta diferente.</p>
+          <p>Es hora de crear nuevas leyendas, dar vida a nuevos personajes y construir historias que se atrevan a ir más allá de lo convencional.</p>
+        </div>
+        <div class="about-block">
+          <p>No buscamos presencia, buscamos permanencia.</p>
+          <p>Queremos que cada proyecto se convierta en una historia que inspire, una experiencia que las personas quieran volver a vivir y un activo creativo que genere conexión, diferenciación y crecimiento en el tiempo.</p>
+        </div>
+        <div class="about-block">
+          <p>Escuchamos, investigamos, imaginamos y creamos.</p>
+          <p>Combinamos comunicación estratégica, storytelling, diseño y metodologías creativas para transformar ideas y problemas únicos en soluciones extraordinarias.</p>
+          <p>Nuestra creatividad es el superpoder. La curiosidad, nuestro punto de partida.</p>
+        </div>
+        <a class="btn-bar" href="#servicios" data-go="servicios">Conoce lo que hacemos</a>
       </div>
     </div>
   </div>
-</template>
+</section>
 
-<template id="tpl-proyectos">
+<section id="sec-proyectos" data-room="proyectos">
   <div class="holo-in">
-    <div class="sec-head">
-      <div><p class="slash">/ Proyectos /</p><h2 class="display small">Trabajos que dejan huella</h2></div>
-      <a class="link-more" href="https://casacuco.cl/proyectos/" target="_blank" rel="noopener">Ver más</a>
-    </div>
-    <div class="projects">
-      <article class="project"><img src="assets/proyectos/de-todo-chile.jpg" alt="De Todo Chile" width="500" height="700"><h4>De Todo Chile</h4><p>Plataforma web + narrativa</p></article>
-      <article class="project"><img src="assets/proyectos/bombus-chilensis.jpg" alt="Bombus Chilensis" width="500" height="700"><h4>Bombus Chilensis</h4><p>Personajes + ilustración</p></article>
-      <article class="project"><img src="assets/proyectos/olivia-home.jpg" alt="Olivia home" width="500" height="700"><h4>Olivia home</h4><p>Diseño digital + contenido</p></article>
-      <article class="project"><img src="assets/proyectos/zappy-y-el-quirincho.jpg" alt="Zappy y El Quirincho" width="500" height="700"><h4>Zappy y El Quirincho</h4><p>Campaña + personajes</p></article>
-    </div>
-    <div class="marquee" aria-label="Creatividad sin miedo, ideas únicas, conversar con nosotros">
-      <div class="marquee-track" aria-hidden="true">
-        <span>Creatividad sin miedo</span><i>✦</i><span>Ideas únicas</span><i>✦</i><span>Conversar con nosotros</span><i>✦</i>
-        <span>Creatividad sin miedo</span><i>✦</i><span>Ideas únicas</span><i>✦</i><span>Conversar con nosotros</span><i>✦</i>
+    <div class="projects-list">
+      <p class="slash">/ Proyectos /</p>
+      <h2 class="display small">Historias que dejan huella.</h2>
+      <p class="intro">Cada proyecto es una oportunidad para imaginar algo diferente. Conoce algunas de las historias, personajes y experiencias que hemos ayudado a crear.</p>
+      <div class="projects">
+        <button type="button" class="project" data-open="de-todo-chile">
+          <img src="assets/proyectos/de-todo-chile-principal.jpg" alt="De Todo Chile" width="1024" height="1024">
+          <h3>De Todo Chile</h3>
+          <p class="cats">Universo narrativo · Cultura · Educación</p>
+          <p>Un universo de personajes e historias que invita a niños y familias a descubrir la diversidad cultural y natural de Chile de manera entretenida y cercana.</p>
+        </button>
+        <button type="button" class="project" data-open="bombus-chilensis">
+          <img src="assets/proyectos/bombus-chilensis-principal.jpg" alt="Bombus Chilensis" width="1200" height="800">
+          <h3>Bombus Chilensis</h3>
+          <p class="cats">Personajes · Storytelling · Conciencia ambiental</p>
+          <p>Personajes e historias que acercan la problemática de la conservación del abejorro chileno mediante una propuesta narrativa y audiovisual.</p>
+        </button>
+        <button type="button" class="project" data-open="olivia-home">
+          <img src="assets/proyectos/olivia-home-principal.jpg" alt="Olivia Home" width="733" height="506">
+          <h3>Olivia Home</h3>
+          <p class="cats">Identidad · Conceptualización · Comunicación</p>
+          <p>Un universo de marca que transforma la sostenibilidad y la tecnología para el hogar en una experiencia cercana y fácil de comprender.</p>
+        </button>
+        <button type="button" class="project" data-open="zappy-el-quirincho">
+          <img src="assets/proyectos/zappy-el-quirincho-principal.jpg" alt="Zappy, el Quirincho" width="927" height="1200">
+          <h3>Zappy, el Quirincho</h3>
+          <p class="cats">Creación de personaje · Transformación cultural</p>
+          <p>Un personaje desarrollado para humanizar la implementación de SAP en Minera HMC y acercar los procesos de transformación digital a sus equipos.</p>
+        </button>
       </div>
     </div>
-  </div>
-</template>
 
-<template id="tpl-servicios">
+    <!-- Páginas internas de proyectos -->
+    <article class="project-detail" data-project="de-todo-chile" hidden>
+      <button type="button" class="back" data-close aria-label="Volver a Proyectos">← Proyectos</button>
+      <div class="detail-grid">
+        <div class="detail-media">
+          <img src="assets/proyectos/de-todo-chile-principal.jpg" alt="Personajes de De Todo Chile" width="1024" height="1024">
+          <img src="assets/proyectos/de-todo-chile.jpg" alt="De Todo Chile" width="500" height="700">
+        </div>
+        <div class="detail-copy">
+          <h3 class="display small">De Todo Chile</h3>
+          <p class="detail-sub">Un país lleno de historias por descubrir.</p>
+          <p class="cats">Categoría: Desarrollo de propiedad intelectual · Storytelling · Educación y cultura</p>
+          <p>De Todo Chile es un universo narrativo que invita a niños y niñas a descubrir la diversidad de nuestro país a través de personajes inspirados en la cultura popular chilena.</p>
+          <p>Mediante historias animadas, cuentos y experiencias educativas, sus protagonistas recorren Chile de norte a sur, dando a conocer nuestra flora, fauna, tradiciones y costumbres de una forma lúdica, cercana y entretenida.</p>
+          <p>El proyecto está pensado especialmente para niños y niñas de 6 a 10 años, junto a sus familias, cuidadores y educadores. Busca despertar la curiosidad, fortalecer la identidad cultural y generar nuevos momentos para aprender y compartir.</p>
+          <p>Su desarrollo contempla una plataforma de contenidos y la posibilidad de expandirse hacia publicaciones, experiencias y otros formatos narrativos, mediante alianzas con establecimientos educacionales, instituciones y marcas.</p>
+          <p>De Todo Chile representa nuestra convicción de que las historias pueden trascender las pantallas, conectar generaciones y convertirse en experiencias que permanecen.</p>
+          <p><b>Una creación de Casa Cuco.</b></p>
+          <a class="btn-bar" href="#contacto" data-go="contacto">Conversemos sobre De Todo Chile</a>
+        </div>
+      </div>
+    </article>
+
+    <article class="project-detail" data-project="bombus-chilensis" hidden>
+      <button type="button" class="back" data-close aria-label="Volver a Proyectos">← Proyectos</button>
+      <div class="detail-grid">
+        <div class="detail-media">
+          <img src="assets/proyectos/bombus-chilensis-principal.jpg" alt="Personaje de Bombus Chilensis" width="1200" height="800">
+          <img src="assets/proyectos/bombus-chilensis.jpg" alt="Bombus Chilensis" width="500" height="700">
+        </div>
+        <div class="detail-copy">
+          <h3 class="display small">Bombus Chilensis</h3>
+          <p class="detail-sub">Pequeños personajes. Una gran causa.</p>
+          <p class="cats">Categoría: Desarrollo de personajes · Storytelling · Stop motion</p>
+          <p>Bombus Chilensis es una propuesta narrativa y audiovisual que utiliza personajes para generar conciencia sobre la situación del abejorro chileno y las amenazas que enfrenta.</p>
+          <p>A través de una historia protagonizada por distintos personajes, el proyecto transforma una problemática ambiental en un relato cercano, entretenido y capaz de despertar interés por la conservación de la biodiversidad.</p>
+          <p>Su universo creativo combina conceptualización, diseño de personajes y narración audiovisual mediante la técnica de stop motion.</p>
+          <p>El proyecto cuenta con dos temporadas de una miniserie animada, demostrando cómo los personajes pueden convertirse en vehículos de educación, sensibilización y conexión emocional.</p>
+          <p>Una historia que nos recuerda que la creatividad también puede ayudar a proteger aquello que hace único a nuestro entorno.</p>
+        </div>
+      </div>
+    </article>
+
+    <article class="project-detail" data-project="olivia-home" hidden>
+      <button type="button" class="back" data-close aria-label="Volver a Proyectos">← Proyectos</button>
+      <div class="detail-grid">
+        <div class="detail-media">
+          <img src="assets/proyectos/olivia-home-principal.jpg" alt="Dispositivo Lomi de Olivia Home" width="733" height="506">
+          <img src="assets/proyectos/olivia-home.jpg" alt="Olivia Home" width="500" height="700">
+        </div>
+        <div class="detail-copy">
+          <h3 class="display small">Olivia Home</h3>
+          <p class="detail-sub">Una nueva forma de vivir la sostenibilidad.</p>
+          <p class="cats">Categoría: Conceptualización de marca · Identidad · Comunicación</p>
+          <p>Olivia Home es una marca que acerca la tecnología y la sostenibilidad a la vida cotidiana, buscando transformar la gestión de residuos del hogar en una experiencia simple, inteligente y familiar.</p>
+          <p>El desafío fue construir un universo visual y comunicacional capaz de transmitir innovación y cercanía, facilitando la comprensión de una solución tecnológica poco habitual en el mercado.</p>
+          <p>El trabajo contempló el desarrollo de identidad, estrategia de marketing y acciones de comunicación con creadores de contenido, generando una experiencia de marca coherente.</p>
+          <p>Esta propuesta acompañó el lanzamiento de Lomi, un dispositivo que transforma residuos orgánicos en material seco y sin olor, acercando nuevas prácticas sostenibles a los hogares.</p>
+          <p>Un ejemplo de cómo una idea compleja puede transformarse en una propuesta comprensible, atractiva y relevante para las personas.</p>
+        </div>
+      </div>
+    </article>
+
+    <article class="project-detail" data-project="zappy-el-quirincho" hidden>
+      <button type="button" class="back" data-close aria-label="Volver a Proyectos">← Proyectos</button>
+      <div class="detail-grid">
+        <div class="detail-media">
+          <img src="assets/proyectos/zappy-el-quirincho-principal.jpg" alt="Zappy, el Quirincho" width="927" height="1200">
+          <img src="assets/proyectos/zappy-y-el-quirincho.jpg" alt="Aplicaciones de Zappy, el Quirincho" width="500" height="700">
+        </div>
+        <div class="detail-copy">
+          <h3 class="display small">Zappy, el Quirincho</h3>
+          <p class="detail-sub">Un personaje que hace más cercano el cambio.</p>
+          <p class="cats">Categoría: Desarrollo de personajes · Comunicación interna · Transformación cultural</p>
+          <p>Zappy, el Quirincho, es un personaje creado para Minera HMC en el contexto de la implementación del sistema SAP en la compañía.</p>
+          <p>El desafío consistía en acercar un proceso de transformación digital a los colaboradores, facilitando la comprensión y adopción de nuevas herramientas y formas de trabajo.</p>
+          <p>A través de la conceptualización y desarrollo del personaje, la comunicación de un cambio tecnológico adquirió un lenguaje más humano, reconocible y cercano.</p>
+          <p>Zappy fue concebido como un recurso narrativo para acompañar la transición y reforzar los mensajes de la campaña interna.</p>
+          <p>Un ejemplo de cómo un personaje puede ayudar a transformar una comunicación técnica en una experiencia más accesible para las personas.</p>
+        </div>
+      </div>
+    </article>
+  </div>
+</section>
+
+<section id="sec-servicios" data-room="servicios">
   <div class="holo-in">
     <p class="slash">/ Servicios /</p>
-    <h2 class="display small">De la idea a la experiencia</h2>
+    <h2 class="display small">De la idea a lo extraordinario.</h2>
+    <p class="intro">Cada desafío tiene una historia esperando ser descubierta. Te ayudamos a encontrarla, desarrollarla y transformarla en una experiencia que conecte con las personas y genere valor para tu proyecto.</p>
     <div class="services">
       <article class="service">
         <div class="service-img"><span class="badge">01</span><img src="assets/servicios/estrategia-y-creatividad.jpg" alt="" width="768" height="724"></div>
-        <h3>Estrategia y creatividad</h3>
-        <p>Transformamos desafíos únicos en conceptos, identidades y soluciones creativas.</p>
-        <a href="#contacto" data-go="contacto">Conversar con nosotros</a>
+        <h3>Estrategia y desarrollo creativo</h3>
+        <p>Escuchamos, investigamos y transformamos desafíos de comunicación en conceptos, relatos y soluciones creativas que permiten a marcas e instituciones diferenciarse, conectar y crecer.</p>
       </article>
       <article class="service">
         <div class="service-img"><span class="badge">02</span><img src="assets/servicios/relatos-y-personajes.jpg" alt="" width="768" height="491"></div>
-        <h3>Relatos y personajes</h3>
-        <p>Creamos historias y personajes capaces de conectar, enseñar y permanecer.</p>
-        <a href="#contacto" data-go="contacto">Conversar con nosotros</a>
+        <h3>Historias y personajes</h3>
+        <p>Creamos personajes con identidad, personalidad y propósito. Desarrollamos historias capaces de emocionar, enseñar y construir vínculos duraderos con las audiencias.</p>
       </article>
       <article class="service">
         <div class="service-img"><span class="badge">03</span><img src="assets/servicios/contenidos-audiovisuales.jpg" alt="" width="768" height="488"></div>
-        <h3>Contenidos audiovisuales</h3>
-        <p>Desarrollamos series animadas, documentales, videos corporativos y pódcast.</p>
-        <a href="#contacto" data-go="contacto">Conversar con nosotros</a>
+        <h3>Universos narrativos</h3>
+        <p>Damos vida a mundos e historias que pueden crecer en diferentes formatos: series, cuentos, publicaciones, contenidos audiovisuales y experiencias interactivas.</p>
       </article>
       <article class="service">
         <div class="service-img"><span class="badge">04</span><img src="assets/servicios/plataformas-y-publicaciones.jpg" alt="" width="768" height="438"></div>
-        <h3>Plataformas y publicaciones</h3>
-        <p>Creamos plataformas de contenido, libros y revistas en formatos digitales o físicos.</p>
-        <a href="#contacto" data-go="contacto">Conversar con nosotros</a>
+        <h3>Consultoría creativa</h3>
+        <p>Acompañamos a marcas, empresas e instituciones en el desarrollo de nuevas ideas, proyectos y estrategias narrativas, combinando metodologías creativas, pensamiento estratégico y storytelling.</p>
       </article>
     </div>
+    <a class="btn-bar" href="#contacto" data-go="contacto">Hablemos de tu proyecto</a>
   </div>
-</template>
+</section>
 
-<template id="tpl-contacto">
+<section id="sec-contacto" data-room="contacto">
   <div class="holo-in">
     <div class="contact-grid">
       <div class="contact-main">
         <p class="slash">/ Contacto /</p>
-        <h2 class="display small">Cuéntanos tu idea</h2>
-        <p>¿Tienes una idea, un desafío o una historia que quieres llevar más lejos?</p>
-        <p>Para desafíos únicos, creamos soluciones integrales que te devuelven al lugar donde nace tu curiosidad.</p>
-        <p><b>Pase, sin miedo. Queremos conocer tu proyecto.</b></p>
+        <h2 class="display small">Toda gran historia comienza con una idea.</h2>
+        <p>¿Tienes una idea, un desafío o una historia que merece llegar más lejos?</p>
+        <p>Nos encantan los proyectos únicos, las preguntas difíciles y las oportunidades de crear algo que todavía no existe.</p>
+        <p>Cuéntanos qué tienes en mente.</p>
+        <p><b>Pase, sin miedo.</b></p>
         <form class="contact-form" novalidate>
-          <input name="name" placeholder="NOMBRE" autocomplete="name" aria-label="Nombre" required>
-          <input name="email" type="email" placeholder="CORREO" autocomplete="email" aria-label="Correo" required>
-          <textarea name="message" rows="3" placeholder="MENSAJE" aria-label="Mensaje" required></textarea>
+          <input name="name" placeholder="Nombre" autocomplete="name" aria-label="Nombre" required>
+          <input name="email" type="email" placeholder="Correo electrónico" autocomplete="email" aria-label="Correo electrónico" required>
+          <input class="full" name="company" placeholder="Empresa u organización" autocomplete="organization" aria-label="Empresa u organización">
+          <textarea name="message" rows="3" placeholder="Cuéntanos tu idea o desafío" aria-label="Cuéntanos tu idea o desafío" required></textarea>
           <label class="hp" aria-hidden="true">Sitio web <input name="sitio_web" tabindex="-1" autocomplete="off"></label>
-          <button type="submit" class="btn-solid">Enviar</button>
+          <button type="submit" class="btn-solid">Enviar mi idea</button>
           <p class="form-status" aria-live="polite"></p>
         </form>
       </div>
       <div class="contact-side">
         <img class="hands" src="assets/brand/manos.png" alt="" width="414" height="171">
         <div class="contact-block">
-          <h6>Contacto directo</h6>
+          <h3>Contacto directo</h3>
           <p class="who">Fernando Muñoz G.</p>
           <p class="mono">fernando@grupokeipoint.com</p>
           <p class="mono">+56 9 3393 8347</p>
         </div>
         <div class="contact-cols">
           <div>
-            <h6>Menú</h6>
+            <h3>Explora nuestra casa</h3>
             <p class="menu-links"><a href="#nosotros" data-go="nosotros">Nosotros</a><a href="#proyectos" data-go="proyectos">Proyectos</a><a href="#servicios" data-go="servicios">Servicios</a><a href="#contacto" data-go="contacto">Contacto</a></p>
           </div>
           <div>
-            <h6>Grupo Keipoint</h6>
-            <p><a href="https://grupokeipoint.com/" target="_blank" rel="noopener">Agencia Keipoint</a></p>
-            <h6>Contacto</h6>
-            <p class="mono">contacto@grupokeipoint.com</p>
+            <h3>Somos parte de Grupo Keipoint</h3>
+            <p class="menu-links"><a href="https://grupokeipoint.com/" target="_blank" rel="noopener">Agencia Keipoint</a><span>Keipoint Producciones</span></p>
           </div>
         </div>
       </div>
     </div>
-    <div class="holo-foot">
+    <footer class="holo-foot">
       <img src="assets/brand/logo-casa-cuco.png" alt="Casa Cuco" width="900" height="410">
-      <p>© 2026 | Casa Cuco · Todos los derechos reservados</p>
-      <p><a href="https://grupokeipoint.com/" target="_blank" rel="noopener">Desarrollado por Grupo Keipoint</a></p>
-    </div>
+      <p>© 2026 Casa Cuco. Todos los derechos reservados.</p>
+      <p>Un estudio de Grupo Keipoint.</p>
+    </footer>
   </div>
-</template>
+</section>
+
+</main>
 
 <script type="module" src="js/main.js"></script>
 </body>

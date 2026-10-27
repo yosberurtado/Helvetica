@@ -400,7 +400,7 @@ function buildInterior() {
     const wrap = document.createElement('div');
     wrap.className = 'holo-wrap';
     wrap.innerHTML = '<div class="holo"></div>';
-    wrap.firstChild.appendChild($('#tpl-' + room.id).content.cloneNode(true));
+    wrap.firstChild.appendChild($('#sec-' + room.id).firstElementChild.cloneNode(true));
     wrap.dataset.room = room.id;
     const css = new CSS3DObject(wrap);
     css.position.z = 0.06;
@@ -467,8 +467,8 @@ renderPass.scene = scene;
 
 // ---------------------------------------------------------------- Cámara exterior (órbita)
 const portrait = innerWidth < innerHeight;
-const ORBIT0 = { az: -0.38, el: 0.24, r: portrait ? 50 : 32 };
-const orbit = { target: new V3(portrait ? 2 : 0.6, portrait ? 6.4 : 5.2, 4.5), ...ORBIT0, auto: false };
+const ORBIT0 = { az: -0.38, el: 0.24, r: portrait ? 56 : 32 };
+const orbit = { target: new V3(portrait ? 2 : 0.6, portrait ? -4 : 5.2, 4.5), ...ORBIT0, auto: false };
 function orbitPos(o = orbit, out = new V3()) {
   const ce = Math.cos(o.el);
   return out.set(o.target.x + Math.sin(o.az) * o.r * ce, o.target.y + Math.sin(o.el) * o.r, o.target.z + Math.cos(o.az) * o.r * ce);
@@ -482,7 +482,6 @@ let flight = null;    // recorrido animado entre salas
 let walkTarget = null; // destino del clic en el piso
 let atPanel = null;    // sala cuyo holograma está encuadrado (para reencuadrar al rotar la pantalla)
 const keys = new Set();
-const joy = { x: 0, y: 0 };
 
 function walkable(x, z) {
   if (!int.rects.some((r) => x >= r.x0 && x <= r.x1 && z >= r.z0 && z <= r.z1)) return false;
@@ -506,26 +505,9 @@ const roomAt = (z) => Math.max(0, Math.min(ROOMS.length - 1, Math.floor(-z / D))
 
 function updateWalk(dt) {
   if (flight) return;
-  const typing = /INPUT|TEXTAREA|SELECT/.test(document.activeElement?.tagName || '');
-  let f = 0, s = 0;
-  if (!typing) {
-    if (keys.has('KeyW') || keys.has('ArrowUp')) f += 1;
-    if (keys.has('KeyS') || keys.has('ArrowDown')) f -= 1;
-    if (keys.has('KeyA')) s -= 1;
-    if (keys.has('KeyD')) s += 1;
-    if (keys.has('ArrowLeft') || keys.has('KeyQ')) player.yaw += 1.9 * dt;
-    if (keys.has('ArrowRight') || keys.has('KeyE')) player.yaw -= 1.9 * dt;
-  }
-  f += -joy.y; s += joy.x;
-  const speed = keys.has('ShiftLeft') || keys.has('ShiftRight') ? 7.5 : 4.2;
-  const fx = -Math.sin(player.yaw), fz = -Math.cos(player.yaw);
+  const speed = 4.2;
   let mx = 0, mz = 0;
-  if (f || s) {
-    walkTarget = null;
-    const l = Math.min(1, Math.hypot(f, s));
-    const n = Math.hypot(f, s) || 1;
-    mx = ((fx * f - fz * s) / n) * l; mz = ((fz * f + fx * s) / n) * l;
-  } else if (walkTarget) {
+  if (walkTarget) {
     const dx = walkTarget.x - player.pos.x, dz = walkTarget.z - player.pos.z, dist = Math.hypot(dx, dz);
     if (dist < 0.25) walkTarget = null;
     else { mx = dx / dist; mz = dz / dist; const want = Math.atan2(-dx, -dz); player.yaw += angleDiff(want, player.yaw) * Math.min(1, dt * 3); }
@@ -549,7 +531,7 @@ function applyPlayerCamera() {
 // Encuadre del holograma: ocupa la pantalla entre la barra superior y la interfaz inferior.
 function hudInsets() {
   const narrow = innerWidth <= 700;
-  return { top: 78, bottom: narrow ? 150 : 96, side: narrow ? 10 : 28 };
+  return { top: 78, bottom: narrow ? 84 : 92, side: narrow ? 10 : 28 };
 }
 function panelFit(p) {
   const { top, bottom, side } = hudInsets();
@@ -641,7 +623,7 @@ function enterHouse(targetRoom) {
       player.pos.set(doorX(0), EYE, -1.6); player.yaw = 0; player.pitch = 0;
       applyPlayerCamera();
       tween(800, (k) => (fade.style.opacity = 1 - k), () => {
-        mode = 'interior';
+        mode = 'interior'; showTip();
         if (targetRoom != null) flyToRoom(targetRoom);
       });
     }));
@@ -669,6 +651,16 @@ function goTo(id) {
   if (mode === 'exterior') enterHouse(i);
   else if (mode === 'interior') flyToRoom(i);
 }
+// Páginas internas de proyectos: se abren dentro del holograma de Proyectos.
+document.addEventListener('click', (e) => {
+  const open = e.target.closest('[data-open]'), close = e.target.closest('[data-close]');
+  if (!open && !close) return;
+  const root = (open || close).closest('.holo-in');
+  root.querySelector('.projects-list').hidden = !!open;
+  root.querySelectorAll('.project-detail').forEach((d) => (d.hidden = !open || d.dataset.project !== open.dataset.open));
+  root.scrollTop = 0;
+  (open ? root.querySelector('.project-detail:not([hidden]) .back') : root.querySelector(`[data-open="${close.closest('.project-detail').dataset.project}"]`))?.focus({ preventScroll: true });
+});
 document.addEventListener('click', (e) => {
   const g = e.target.closest('[data-go]');
   if (!g) return;
@@ -676,17 +668,29 @@ document.addEventListener('click', (e) => {
   goTo(g.dataset.go);
 });
 const nav = $('#nav'), menuBtn = $('#menuBtn');
-function closeMenu() { nav.classList.remove('open'); menuBtn.setAttribute('aria-expanded', 'false'); }
-menuBtn.addEventListener('click', () => { const o = nav.classList.toggle('open'); menuBtn.setAttribute('aria-expanded', String(o)); });
+function setMenu(open) { nav.classList.toggle('open', open); menuBtn.setAttribute('aria-expanded', String(open)); menuBtn.textContent = open ? 'Cerrar menú' : 'Menú'; }
+function closeMenu() { setMenu(false); }
+menuBtn.addEventListener('click', () => setMenu(!nav.classList.contains('open')));
 function setActive(id) { nav.querySelectorAll('button').forEach((b) => b.classList.toggle('on', b.dataset.go === id)); }
 function setHash(id) { try { history.replaceState(null, '', id ? '#' + id : location.pathname + location.search); } catch { /* sin historial */ } }
 setActive('exterior');
 
 $('#enterBtn').addEventListener('click', () => enterHouse());
-$('#exitBtn').addEventListener('click', () => exitHouse());
 const orbitBtn = $('#orbitBtn');
-function syncOrbitBtn() { orbitBtn.classList.toggle('on', orbit.auto); orbitBtn.textContent = orbit.auto ? 'Pausar órbita' : 'Órbita 360°'; }
+function syncOrbitBtn() { orbitBtn.classList.toggle('on', orbit.auto); orbitBtn.textContent = orbit.auto ? 'Pausar recorrido' : 'Explorar 360°'; }
 orbitBtn.addEventListener('click', () => { orbit.auto = !orbit.auto; syncOrbitBtn(); });
+
+// Ayuda contextual breve: aparece una sola vez al entrar y se va al primer gesto o a los 6 segundos.
+let tipShown = false, tipTimer;
+function showTip() {
+  if (tipShown) return;
+  tipShown = true;
+  const tip = $('#tip');
+  tip.textContent = isTouch ? 'Desliza para mirar · Toca el piso para avanzar' : 'Arrastra para mirar · Haz clic en el piso para avanzar';
+  tip.hidden = false;
+  tipTimer = setTimeout(hideTip, 6000);
+}
+function hideTip() { clearTimeout(tipTimer); $('#tip').hidden = true; }
 
 // Pantalla completa (si el navegador lo permite).
 const fsBtn = $('#fsBtn');
@@ -707,24 +711,23 @@ document.addEventListener('submit', (e) => {
   const status = form.querySelector('.form-status');
   const button = form.querySelector('[type=submit]');
   const data = Object.fromEntries(new FormData(form));
-  const labels = { name: 'nombre', email: 'correo', message: 'mensaje' };
-  const missing = Object.keys(labels).filter((k) => !String(data[k] || '').trim());
-  if (missing.length) { status.textContent = 'Completa ' + missing.map((k) => labels[k]).join(', ') + ' para enviar.'; return; }
-  if (!/^\S+@\S+\.\S+$/.test(data.email)) { status.textContent = 'Revisa el correo: falta la @ o el dominio.'; return; }
+  const missing = ['name', 'email', 'message'].filter((k) => !String(data[k] || '').trim());
+  if (missing.length) { status.textContent = 'Completa los campos obligatorios para continuar.'; return; }
+  if (!/^\S+@\S+\.\S+$/.test(data.email)) { status.textContent = 'Ingresa un correo electrónico válido.'; return; }
   const endpoint = window.CASA_CUCO?.contactUrl;
   if (endpoint) {
-    button.disabled = true; status.textContent = 'Enviando…';
+    button.disabled = true; status.textContent = 'Enviando tu mensaje…';
     fetch(endpoint, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ...data, elapsed: Date.now() - pageStart }) })
       .then((r) => r.json().catch(() => ({})).then((j) => ({ ok: r.ok, j })))
       .then(({ ok, j }) => {
-        status.textContent = ok ? 'Gracias. Recibimos tu mensaje y te responderemos pronto.' : (j.message || 'No pudimos enviar el mensaje. Escríbenos a contacto@grupokeipoint.com.');
+        status.textContent = ok ? '¡Gracias por escribirnos! Recibimos tu idea y pronto nos pondremos en contacto.' : (j.message || 'No pudimos enviar tu mensaje. Inténtalo nuevamente o escríbenos a contacto@grupokeipoint.com.');
         if (ok) form.reset();
       })
-      .catch(() => { status.textContent = 'No pudimos enviar el mensaje. Revisa tu conexión o escríbenos a contacto@grupokeipoint.com.'; })
+      .catch(() => { status.textContent = 'Parece que no tienes conexión. Revisa tu conexión e inténtalo nuevamente.'; })
       .finally(() => { button.disabled = false; });
     return;
   }
-  const mail = `mailto:contacto@grupokeipoint.com?subject=${encodeURIComponent('Casa Cuco · ' + data.name)}&body=${encodeURIComponent(`${data.message}\n\n${data.name} · ${data.email}`)}`;
+  const mail = `mailto:contacto@grupokeipoint.com?subject=${encodeURIComponent('Casa Cuco · ' + data.name)}&body=${encodeURIComponent(`${data.message}\n\n${data.name} · ${data.email}${data.company ? ' · ' + data.company : ''}`)}`;
   status.innerHTML = `Abrimos tu correo con el mensaje listo. Si no se abre, <a href="${mail}">haz clic aquí</a> o escribe a contacto@grupokeipoint.com.`;
   try { location.href = mail; } catch { /* el enlace queda visible */ }
 });
@@ -742,7 +745,7 @@ canvas.addEventListener('pointermove', (e) => {
   if (!drag || e.pointerId !== drag.id) return;
   const dx = e.clientX - drag.x, dy = e.clientY - drag.y;
   drag.x = e.clientX; drag.y = e.clientY;
-  if (Math.hypot(e.clientX - drag.sx, e.clientY - drag.sy) > 5) { drag.moved = true; canvas.classList.add('dragging'); }
+  if (Math.hypot(e.clientX - drag.sx, e.clientY - drag.sy) > 5) { drag.moved = true; canvas.classList.add('dragging'); if (mode === 'interior') hideTip(); }
   if (!drag.moved) return;
   if (mode === 'exterior') {
     orbit.az -= dx * 0.006; orbit.el = THREE.MathUtils.clamp(orbit.el + dy * 0.004, -0.05, 1.0);
@@ -801,31 +804,9 @@ addEventListener('keydown', (e) => {
     if (e.key === 'Home') { Object.assign(orbit, ORBIT0); orbit.auto = false; syncOrbitBtn(); }
     return;
   }
-  if (mode === 'interior') {
-    if (/^Digit[1-5]$/.test(e.code)) { flyToRoom(+e.code.slice(5) - 1); return; }
-    if (e.code.startsWith('Arrow') || e.code === 'Space') e.preventDefault();
-    keys.add(e.code);
-    if (flight && /Key[WASD]|Arrow/.test(e.code)) flight = null;
-  }
 });
 addEventListener('keyup', (e) => keys.delete(e.code));
 addEventListener('blur', () => keys.clear());
-
-// Joystick táctil.
-const joyEl = $('#joy'), knob = $('#joyKnob');
-let joyId = null;
-joyEl.addEventListener('pointerdown', (e) => { joyId = e.pointerId; joyEl.setPointerCapture(e.pointerId); moveJoy(e); if (flight) flight = null; });
-joyEl.addEventListener('pointermove', (e) => { if (e.pointerId === joyId) moveJoy(e); });
-const resetJoy = () => { joyId = null; joy.x = joy.y = 0; knob.style.transform = ''; };
-joyEl.addEventListener('pointerup', resetJoy); joyEl.addEventListener('pointercancel', resetJoy);
-function moveJoy(e) {
-  const r = joyEl.getBoundingClientRect();
-  let x = (e.clientX - r.left - r.width / 2) / 42, y = (e.clientY - r.top - r.height / 2) / 42;
-  const l = Math.hypot(x, y); if (l > 1) { x /= l; y /= l; }
-  joy.x = x; joy.y = y; knob.style.transform = `translate(${x * 36}px,${y * 36}px)`;
-}
-if (isTouch) $('#extHint').innerHTML = '<b>Arrastra</b> girar · <b>Toca la puerta</b> para entrar';
-if (isTouch) $('#intHint').innerHTML = '<b>Control</b> caminar · <b>Arrastra</b> mirar · <b>Toca el piso</b> ir ahí';
 
 // ---------------------------------------------------------------- Minimapa
 const mm = $('#minimap'), mg = mm.getContext('2d');
@@ -840,7 +821,6 @@ function drawMinimap() {
     mg.fillStyle = on ? '#daff0226' : '#ffffff08'; mg.fillRect(x0 + 1, y0, x1 - x0 - 2, y1 - y0);
     mg.strokeStyle = on ? '#daff02' : '#daff0255'; mg.lineWidth = 1; mg.strokeRect(x0 + 1.5, y0 + 0.5, x1 - x0 - 3, y1 - y0 - 1);
     mg.fillStyle = on ? '#daff02' : '#a4a4a4'; mg.font = '9px ui-monospace,monospace'; mg.textAlign = 'center';
-    mg.fillText('0' + (i + 1), (x0 + x1) / 2, MMH - 7);
   });
   const p = int.panels[player.room];
   if (p) { mg.fillStyle = '#daff02aa'; mg.fillRect(mmX(p.center.z) - 1, mmY(p.center.x) - 6, 2, 12); }
@@ -881,7 +861,6 @@ function updateRoomHUD() {
   const r = roomAt(player.pos.z);
   if (r === player.room && hudRoom === r) return;
   player.room = r; hudRoom = r;
-  $('#roomLabel').textContent = ROOMS[r].name;
   setActive(ROOMS[r].id); setHash(ROOMS[r].id);
 }
 
