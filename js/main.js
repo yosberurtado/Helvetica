@@ -323,11 +323,13 @@ function buildInterior() {
     const P = inner.map(([x, y]) => [x, Math.max(y, 0)]);
     for (const zf of [zw + 0.6, zw - 0.6]) {
       for (const [a, b] of [[P[1], P[2]], [P[2], P[3]], [P[3], P[4]], [P[4], P[0]]]) doorPart(bar(new V3(a[0], a[1], zf), new V3(b[0], b[1], zf), 0.07, neonMat), k);
-      const sill = bar(new V3(dx - DOOR_W, 0.02, zf), new V3(dx + DOOR_W, 0.02, zf), 0.05, neonMat); scene.add(sill);
+      doorPart(bar(new V3(dx - DOOR_W, 0.02, zf), new V3(dx + DOOR_W, 0.02, zf), 0.05, neonMat), k);
     }
     // Zona invisible que cubre el vano: un clic en la puerta lleva a la sala del otro lado.
-    const doorZone = new THREE.Mesh(new THREE.ShapeGeometry(new THREE.Shape(P.map(([x, y]) => new THREE.Vector2(x, y)))), new THREE.MeshBasicMaterial({ transparent: true, opacity: 0, depthWrite: false, side: THREE.DoubleSide }));
-    doorZone.position.z = zw; doorPart(doorZone, k);
+    // Cubre el vano y todo el marco, por delante de ambas caras de la pared, para que cualquier punto de la puerta responda.
+    const zoneGeo = new THREE.ShapeGeometry(new THREE.Shape(doorPoly(dx, 1.05).map(([x, y]) => new THREE.Vector2(x, Math.max(y, 0)))));
+    const zoneMat = new THREE.MeshBasicMaterial({ transparent: true, opacity: 0, depthWrite: false, side: THREE.DoubleSide });
+    for (const zf of [zw + 0.74, zw - 0.74]) { const zone = new THREE.Mesh(zoneGeo, zoneMat); zone.position.z = zf; doorPart(zone, k); }
     const sealed = k === NWALL - 1, exit = k === 0;
     if (sealed || exit) {
       // Portal de luz: salida al exterior (k=0) o luz de fondo de la última sala.
@@ -526,15 +528,16 @@ function applyOrbit() { orbitPos(orbit, camera.position); camera.lookAt(orbit.ta
 applyOrbit();
 
 // ---------------------------------------------------------------- Jugador interior
-const player = { pos: new V3(doorX(0), EYE, -2), yaw: 0, pitch: 0, room: 0 };
-let flight = null;    // recorrido animado entre salas
-let walkTarget = null; // destino del clic en el piso
-let atPanel = null;    // sala cuyo holograma está encuadrado (para reencuadrar al rotar la pantalla)
+const player = { pos: new V3(doorX(0), EYE, -2), yaw: 0, pitch: 0, room: 0, lift: 0 };
+let flight = null;     // recorrido animado
+let walkPath = [];     // puntos a recorrer caminando (clic en el piso)
+let atPanel = null;    // sala cuyo holograma está encuadrado
 const keys = new Set();
 
-function walkable(x, z) {
+function walkable(x, z, ignore = null) {
   if (!int.rects.some((r) => x >= r.x0 && x <= r.x1 && z >= r.z0 && z <= r.z1)) return false;
   for (const o of int.obstacles) {
+    if (o === ignore) continue;
     if (o.type === 'circle') { if (Math.hypot(x - o.x, z - o.z) < o.r) return false; }
     else {
       const ax = o.b.x - o.a.x, az = o.b.z - o.a.z, t = Math.max(0, Math.min(1, ((x - o.a.x) * ax + (z - o.a.z) * az) / (ax * ax + az * az)));
@@ -551,29 +554,97 @@ function tryMove(dx, dz) {
   return moved;
 }
 const roomAt = (z) => Math.max(0, Math.min(ROOMS.length - 1, Math.floor(-z / D)));
+const angleDiff = (a, b) => { let d = a - b; while (d > Math.PI) d -= Math.PI * 2; while (d < -Math.PI) d += Math.PI * 2; return d; };
+
+// Si por cualquier motivo la cámara queda dentro de un muro u obstáculo, se la lleva al punto libre más cercano.
+function nearestWalkable(x, z) {
+  if (walkable(x, z)) return null;
+  for (let r = 0.15; r <= 6; r += 0.15) {
+    for (let k = 0; k < 24; k++) {
+      const a = (k / 24) * Math.PI * 2, nx = x + Math.cos(a) * r, nz = z + Math.sin(a) * r;
+      if (walkable(nx, nz)) return new V3(nx, EYE, nz);
+    }
+  }
+  return new V3(doorX(roomAt(z)), EYE, -roomAt(z) * D - 3);
+}
+function unstick() {
+  const free = nearestWalkable(player.pos.x, player.pos.z);
+  if (free) { player.pos.x = free.x; player.pos.z = free.z; }
+}
+
+// ---- Trayectorias: pasan por el centro de las puertas y rodean los paneles, nunca por detrás de ellos.
+function segDist(a, b, c, d) { // distancia mínima entre los segmentos ab y cd (plano XZ)
+  const near = (p, q, r) => { const qx = r.x - q.x, qz = r.z - q.z, l = qx * qx + qz * qz || 1, t = Math.max(0, Math.min(1, ((p.x - q.x) * qx + (p.z - q.z) * qz) / l)); return Math.hypot(p.x - (q.x + qx * t), p.z - (q.z + qz * t)); };
+  const ccw = (p, q, r) => (r.z - p.z) * (q.x - p.x) > (q.z - p.z) * (r.x - p.x);
+  if (ccw(a, c, d) !== ccw(b, c, d) && ccw(a, b, c) !== ccw(a, b, d)) return 0;
+  return Math.min(near(a, c, d), near(b, c, d), near(c, a, b), near(d, a, b));
+}
+const blocking = (a, b) => int.panels.find((p) => segDist(a, b, p.obstacle.a, p.obstacle.b) < 0.75);
+// Rodea un panel por uno de sus extremos: uno o dos puntos de giro (si hay que pasar de atrás hacia adelante).
+function detour(a, b, panel) {
+  const o = panel.obstacle, c = panel.center, n = panel.normal;
+  const side = (q) => Math.sign((q.x - c.x) * n.x + (q.z - c.z) * n.z) || 1;
+  let best = null, bestLen = Infinity;
+  const ok = (pts) => {
+    const all = [a, ...pts, b];
+    for (const q of pts) if (!walkable(q.x, q.z)) return false;
+    for (let i = 1; i < all.length; i++) if (segDist(all[i - 1], all[i], o.a, o.b) < 0.7) return false;
+    return true;
+  };
+  for (const end of [o.a, o.b]) {
+    const out = new V3(end.x - c.x, 0, end.z - c.z).normalize();
+    const corner = (sd) => new V3(end.x + out.x * 1.2 + n.x * sd * 0.9, EYE, end.z + out.z * 1.2 + n.z * sd * 0.9);
+    const options = side(a) === side(b) ? [[corner(side(a))]] : [[corner(side(a)), corner(side(b))]];
+    options.push([corner(1)], [corner(-1)]);
+    for (const pts of options) {
+      if (!ok(pts)) continue;
+      const len = [a, ...pts, b].reduce((s2, q, i, arr) => s2 + (i ? q.distanceTo(arr[i - 1]) : 0), 0);
+      if (len < bestLen) { bestLen = len; best = pts; }
+    }
+  }
+  return best;
+}
+function planPath(from, to) {
+  const pts = [new V3(from.x, EYE, from.z)];
+  let cur = roomAt(from.z);
+  const goal = roomAt(to.z), step = goal > cur ? 1 : -1;
+  while (cur !== goal) {
+    const k = step > 0 ? cur + 1 : cur, dx = doorX(k), zw = -k * D;
+    pts.push(new V3(dx, EYE, zw + 1.7 * step), new V3(dx, EYE, zw - 1.7 * step));
+    cur += step;
+  }
+  pts.push(new V3(to.x, EYE, to.z));
+  const out = [pts[0]];
+  for (let i = 1; i < pts.length; i++) {
+    const prev = out[out.length - 1], next = pts[i], p = blocking(prev, next);
+    if (p) { const d = detour(prev, next, p); if (d) out.push(...d); }
+    out.push(next);
+  }
+  return out.filter((q, i) => i === 0 || q.distanceTo(out[i - 1]) > 0.05);
+}
 
 function updateWalk(dt) {
   if (flight) return;
+  if (zoomDist == null) unstick();
   const speed = 4.2;
-  let mx = 0, mz = 0;
-  if (walkTarget) {
-    const dx = walkTarget.x - player.pos.x, dz = walkTarget.z - player.pos.z, dist = Math.hypot(dx, dz);
-    if (dist < 0.25) walkTarget = null;
-    else { mx = dx / dist; mz = dz / dist; const want = Math.atan2(-dx, -dz); player.yaw += angleDiff(want, player.yaw) * Math.min(1, dt * 3); }
+  if (walkPath.length) {
+    const t = walkPath[0], dx = t.x - player.pos.x, dz = t.z - player.pos.z, dist = Math.hypot(dx, dz);
+    if (dist < 0.2) walkPath.shift();
+    else {
+      atPanel = null; zoomDist = null;
+      const step = Math.min(dist, speed * dt);
+      if (!tryMove((dx / dist) * step, (dz / dist) * step)) walkPath = [];
+      player.yaw += angleDiff(Math.atan2(-dx, -dz), player.yaw) * Math.min(1, dt * 4);
+      player.pitch += (0.04 - player.pitch) * Math.min(1, dt * 3); // al caminar, mirada al frente
+    }
   }
-  if (mx || mz) {
-    atPanel = null; zoomDist = null;
-    const ok = tryMove(mx * speed * dt, mz * speed * dt);
-    if (!ok) walkTarget = null;
-    player.pitch += (0.04 - player.pitch) * Math.min(1, dt * 3); // al caminar, mirada al frente
-  }
+  player.lift += ((zoomDist == null ? 0 : player.liftWant || 0) - player.lift) * Math.min(1, dt * 6);
   if (player.pos.z > 0.35) { exitHouse(); return; }
 }
-const angleDiff = (a, b) => { let d = a - b; while (d > Math.PI) d -= Math.PI * 2; while (d < -Math.PI) d += Math.PI * 2; return d; };
 
 function applyPlayerCamera() {
   camera.position.copy(player.pos);
-  camera.position.y = EYE;
+  camera.position.y = EYE + player.lift;
   camera.rotation.set(player.pitch, player.yaw, 0);
 }
 
@@ -588,50 +659,47 @@ function panelFit(p) {
   const usableV = Math.max(0.3, (innerHeight - top - bottom) / innerHeight);
   const usableH = (innerWidth - side * 2) / innerWidth;
   const hw = p.w / 2 + 0.2, hh = p.h / 2 + 0.2;
-  const dist = THREE.MathUtils.clamp(Math.max(hw / (tanH * usableH), hh / (tanV * usableV)), 3.2, 10.2);
-  const view = p.center.clone().addScaledVector(p.normal, dist); view.y = EYE;
-  // Centro del área libre en coordenadas de pantalla (NDC), para inclinar la mirada hacia ahí.
+  let dist = THREE.MathUtils.clamp(Math.max(hw / (tanH * usableH), hh / (tanV * usableV)), 2.6, 10.2);
+  const at = (d) => p.center.clone().addScaledVector(p.normal, d);
+  while (dist > 2 && !walkable(at(dist).x, at(dist).z, p.obstacle)) dist -= 0.2; // el punto de vista siempre dentro de la sala
+  const view = at(dist); view.y = EYE;
   const ndcY = 1 - (2 * (top + (innerHeight - top - bottom) / 2)) / innerHeight;
-  const pitchAt = (d) => Math.atan2(p.center.y - EYE, d) - Math.atan(ndcY * tanV) * Math.min(1, d / dist);
+  const minD = p.obstacle ? 0.8 : 0.6;
+  // Al acercarse, la cámara sube hasta la altura del centro del panel para verlo de frente.
+  const liftAt = (d) => (p.center.y - EYE) * THREE.MathUtils.clamp(1 - (d - minD) / Math.max(0.1, dist - minD), 0, 1);
+  const pitchAt = (d) => Math.atan2(p.center.y - EYE - liftAt(d), d) - Math.atan(ndcY * tanV) * Math.min(1, d / dist);
   const yaw = Math.atan2(p.normal.x, p.normal.z);
-  return { view, pitch: pitchAt(dist), yaw, dist, pitchAt };
+  return { view, pitch: pitchAt(dist), yaw, dist, minD, pitchAt, liftAt };
 }
 
-// Recorrido animado: atraviesa las puertas hasta quedar frente al holograma.
+// Recorrido animado hasta quedar frente al holograma (de la sala o de la ficha flotante).
 function flyToRoom(i, instant = false, p = int.panels[i]) {
-  const from = player.pos.clone(); from.y = EYE;
-  const pts = [from];
-  let cur = roomAt(from.z);
-  const step = i > cur ? 1 : -1;
-  while (cur !== i) {
-    const k = step > 0 ? cur + 1 : cur;
-    const dx = doorX(k), zw = -k * D;
-    pts.push(new V3(dx, EYE, zw + 2.4 * step), new V3(dx, EYE, zw - 2.4 * step));
-    cur += step;
-  }
-  const { view, pitch: wantPitch, yaw: wantYaw } = panelFit(p);
-  pts.push(view);
-  walkTarget = null; atPanel = i; zoomDist = null; yawVel = 0;
-  if (instant || reduceMotion) { player.pos.copy(view); player.yaw = wantYaw; player.pitch = wantPitch; return; }
-  const curve = new THREE.CatmullRomCurve3(pts, false, 'centripetal');
-  const length = curve.getLength();
-  if (length < 0.3) { tween(700, (k) => { player.yaw += angleDiff(wantYaw, player.yaw) * k; player.pitch += (wantPitch - player.pitch) * k; }); return; }
-  const dur = THREE.MathUtils.clamp(length / 7, 1.1, 7) * 1000;
-  const yaw0 = player.yaw, pitch0 = player.pitch;
-  flight = { curve, dur, start: performance.now(), yaw0, pitch0, wantYaw, wantPitch };
+  const fit = panelFit(p);
+  walkPath = []; atPanel = i; zoomDist = null; yawVel = 0; player.liftWant = 0;
+  if (instant || reduceMotion) { player.pos.copy(fit.view); player.yaw = fit.yaw; player.pitch = fit.pitch; player.lift = 0; flight = null; return; }
+  const pts = planPath(player.pos, fit.view);
+  const lens = [0];
+  for (let k = 1; k < pts.length; k++) lens.push(lens[k - 1] + pts[k].distanceTo(pts[k - 1]));
+  const length = lens[lens.length - 1];
+  const dur = THREE.MathUtils.clamp(length / 8, 0.7, 5) * 1000;
+  flight = { pts, lens, length, dur, start: performance.now(), wantYaw: fit.yaw, wantPitch: fit.pitch, last: performance.now() };
 }
 function updateFlight(now) {
   if (!flight) return;
-  const k = THREE.MathUtils.clamp((now - flight.start) / flight.dur, 0, 1), e = ease(k);
-  const pt = flight.curve.getPointAt(e), tan = flight.curve.getTangentAt(Math.min(0.999, e));
-  player.pos.copy(pt);
-  const travelYaw = Math.atan2(-tan.x, -tan.z);
-  const blendIn = Math.min(1, k / 0.15), blendOut = Math.max(0, (k - 0.7) / 0.3);
-  let yaw = flight.yaw0 + angleDiff(travelYaw, flight.yaw0) * blendIn;
-  yaw = yaw + angleDiff(flight.wantYaw, yaw) * ease(blendOut);
-  player.yaw = yaw;
-  player.pitch = flight.pitch0 * (1 - blendIn) + flight.wantPitch * ease(blendOut);
-  if (k >= 1) flight = null;
+  const f = flight, dt = Math.min(0.05, (now - f.last) / 1000); f.last = now;
+  const k = THREE.MathUtils.clamp((now - f.start) / f.dur, 0, 1), sAt = ease(k) * f.length;
+  let i = 1; while (i < f.pts.length - 1 && f.lens[i] < sAt) i++;
+  const a = f.pts[i - 1], b = f.pts[i], seg = f.lens[i] - f.lens[i - 1] || 1, u = THREE.MathUtils.clamp((sAt - f.lens[i - 1]) / seg, 0, 1);
+  player.pos.lerpVectors(a, b, u); player.pos.y = EYE;
+  // Mira hacia donde avanza y, al final, hacia el panel; siempre suavizado (sin giros bruscos en las esquinas).
+  const remaining = f.length - sAt;
+  const travel = Math.atan2(-(b.x - a.x), -(b.z - a.z));
+  const want = remaining < 2.5 || f.length < 1.5 ? f.wantYaw : travel;
+  const r = Math.min(1, dt * (remaining < 2.5 ? 7 : 5));
+  player.yaw += angleDiff(want, player.yaw) * r;
+  player.pitch += ((remaining < 2.5 ? f.wantPitch : 0.04) - player.pitch) * r;
+  player.lift += (0 - player.lift) * r;
+  if (k >= 1) { player.yaw = f.wantYaw; player.pitch = f.wantPitch; flight = null; unstick(); }
 }
 
 // ---------------------------------------------------------------- Tweens
@@ -677,7 +745,7 @@ function enterHouse(targetRoom) {
 }
 function exitHouse() {
   if (mode !== 'interior') return;
-  mode = 'transition'; flight = null; walkTarget = null; atPanel = null; keys.clear();
+  mode = 'transition'; flight = null; walkPath = []; atPanel = null; keys.clear();
   tween(550, (k) => (fade.style.opacity = k), () => {
     setScene(ext.scene);
     const p1 = new V3(ext.mouthX, 1.2, ext.DEPTH + 7), l1 = new V3(ext.mouthX, 1, 0);
@@ -779,7 +847,7 @@ document.addEventListener('click', (e) => {
   if (open) { openProject(open.dataset.open); return; }
   // Clic en un panel que no está encuadrado: la cámara se acerca y lo encuadra.
   const wrap = e.target.closest('.holo-wrap');
-  if (wrap && mode === 'interior' && !flight && !e.target.closest('a, button, input, textarea, label')) {
+  if (wrap && mode === 'interior' && !e.target.closest('a, button, input, textarea, label')) {
     const i = ROOMS.findIndex((r) => r.id === wrap.dataset.room);
     if (i >= 0 && atPanel !== i) flyToRoom(i);
   }
@@ -886,7 +954,7 @@ addEventListener('pointermove', (e) => {
     orbit.az -= dx * 0.006; orbit.el = THREE.MathUtils.clamp(orbit.el + dy * 0.004, -0.05, 1.0);
     if (orbit.auto) { orbit.auto = false; syncOrbitBtn(); }
   } else if (mode === 'interior') {
-    if (flight) flight = null; // el usuario toma el control
+    if (flight) { flight = null; unstick(); } // el usuario toma el control
     player.yaw += dx * YAW_K; // solo eje horizontal
     yawVel = yawVel * 0.6 + ((dx * YAW_K) / dt) * 0.4;
   }
@@ -920,7 +988,7 @@ function handleClick(e) {
     if (raycaster.intersectObjects(ext.doorParts, false).length) enterHouse();
     return;
   }
-  if (mode !== 'interior' || flight) return;
+  if (mode !== 'interior') return;
   if (floatOpen) { closeProject(); return; }
   const slabs = int.panels.map((p) => p.slab);
   const hit = raycaster.intersectObjects([int.mirror, ...int.solids, ...int.doorHits, ...slabs], false)[0];
@@ -932,8 +1000,14 @@ function handleClick(e) {
   if (o !== int.mirror) return; // pared o techo: no hace nada
   const r = roomAt(hit.point.z);
   if (r !== player.room) { flyToRoom(r); return; } // piso de otra sala visto por la puerta
-  zoomDist = null;
-  walkTarget = new V3(hit.point.x, 0, hit.point.z);
+  // Piso justo frente a una puerta (umbral de luz incluido): también cuenta como la puerta.
+  for (let k = 0; k < NWALL - 1; k++) {
+    if (Math.abs(hit.point.x - doorX(k)) < DOOR_W + 0.5 && Math.abs(hit.point.z + k * D) < 2.2) { goThroughDoor(k); return; }
+  }
+  if (flight) { flight = null; }
+  const dest = nearestWalkable(hit.point.x, hit.point.z) || new V3(hit.point.x, EYE, hit.point.z);
+  zoomDist = null; atPanel = null;
+  walkPath = planPath(player.pos, dest).slice(1);
   int.marker.position.set(hit.point.x, 0.03, hit.point.z);
   int.marker.material.opacity = 1; int.marker.scale.setScalar(1);
 }
@@ -947,20 +1021,23 @@ function goThroughDoor(k) {
 let zoomDist = null; // distancia elegida al holograma encuadrado (null = encuadre automático)
 const zoomTarget = () => (floatOpen ? int.float : atPanel != null ? int.panels[atPanel] : null);
 function zoomBy(delta) {
-  if (mode !== 'interior' || flight) return;
+  if (mode !== 'interior') return;
   hideTip();
+  if (flight) { flight = null; unstick(); }
   const p = zoomTarget();
   if (!p) { const step = THREE.MathUtils.clamp(-delta * 2.5, -1.2, 1.2); tryMove(-Math.sin(player.yaw) * step, -Math.cos(player.yaw) * step); return; }
-  const fit = panelFit(p);
-  const min = Math.max(1.3, fit.dist * 0.4), max = fit.dist + 2.5;
-  let d = THREE.MathUtils.clamp((zoomDist ?? fit.dist) + delta, min, max);
+  const fit = panelFit(p), min = fit.minD, max = fit.dist + 2.5;
+  const cur = zoomDist ?? fit.dist;
+  // Paso proporcional a la distancia: fino de cerca, rápido de lejos.
+  let d = THREE.MathUtils.clamp(cur + delta * Math.max(0.25, cur / 3.5), min, max);
   const at = (dd) => p.center.clone().addScaledVector(p.normal, dd);
-  while (d > min && !walkable(at(d).x, at(d).z)) d -= 0.1; // no atravesar paredes
+  while (d > min && !walkable(at(d).x, at(d).z, p.obstacle)) d -= 0.1; // nunca dentro de un muro
   zoomDist = d;
+  player.liftWant = fit.liftAt(d);
 }
 function updateZoom(dt) {
   const p = zoomTarget();
-  if (zoomDist == null || !p || flight || walkTarget) return;
+  if (zoomDist == null || !p || flight || walkPath.length) return;
   const fit = panelFit(p), want = p.center.clone().addScaledVector(p.normal, zoomDist);
   const k = Math.min(1, dt * 7);
   player.pos.x += (want.x - player.pos.x) * k; player.pos.z += (want.z - player.pos.z) * k;
@@ -973,7 +1050,7 @@ addEventListener('wheel', (e) => {
   }
   if (mode !== 'interior' || e.target.closest?.('.topbar, .map-box')) return;
   const sc = e.target.closest?.('#css-layer .holo-in, #css-layer .float-in');
-  if (sc) { // primero se desplaza el contenido del holograma; al llegar al borde, acerca o aleja
+  if (sc && !e.ctrlKey) { // primero se desplaza el contenido; al llegar al borde, acerca o aleja (el pellizco del trackpad siempre acerca)
     const can = e.deltaY > 0 ? sc.scrollTop + sc.clientHeight < sc.scrollHeight - 1 : sc.scrollTop > 0;
     if (can) return;
   }
@@ -1127,4 +1204,13 @@ if (start >= 0) {
 }
 
 // Acceso para pruebas y depuración.
-window.casaCuco = { goTo, enterHouse, exitHouse, player, get mode() { return mode; } };
+window.casaCuco = { goTo, enterHouse, exitHouse, player, get mode() { return mode; }, get flying() { return !!flight; }, planPath, walkable, panelFit, panels: int.panels, flyToRoom, zoomBy, get zoomDist() { return zoomDist; },
+  // Prueba interna: qué toca un clic dirigido a un punto del mundo (pared, puerta, panel o piso).
+  probe(x, y, z) {
+    const o = camera.position.clone(); raycaster.set(o, new V3(x, y, z).sub(o).normalize());
+    const h = raycaster.intersectObjects([int.mirror, ...int.solids, ...int.doorHits, ...int.panels.map((p) => p.slab)], false)[0];
+    if (!h) return 'nada';
+    if (h.object.userData.door != null) return 'puerta ' + h.object.userData.door;
+    if (h.object === int.mirror) return 'piso';
+    return int.panels.some((p) => p.slab === h.object) ? 'panel' : 'pared';
+  } };
