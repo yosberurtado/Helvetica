@@ -401,6 +401,9 @@ function buildInterior() {
     wrap.className = 'holo-wrap';
     wrap.innerHTML = '<div class="holo"></div>';
     wrap.firstChild.appendChild($('#sec-' + room.id).firstElementChild.cloneNode(true));
+    wrap.querySelectorAll('.project-detail').forEach((d) => d.remove()); // las fichas se abren flotando
+    const light = i % 2 === 1;
+    if (light) wrap.classList.add('light');
     wrap.dataset.room = room.id;
     const css = new CSS3DObject(wrap);
     css.position.z = 0.06;
@@ -410,10 +413,48 @@ function buildInterior() {
     const along = new V3(Math.cos(theta), 0, -Math.sin(theta));
     const obstacle = { type: 'seg', a: new V3(), b: new V3(), r: 0.5 };
     obstacles.push(obstacle);
-    panels.push({ room: i, group: pg, css, wrap, center: new V3(px, 2.75, pz), normal, along, obstacle, opacity: 0, frame: null, slab: null });
+    panels.push({ room: i, group: pg, css, wrap, light, center: new V3(px, 2.75, pz), normal, along, obstacle, opacity: 0, frame: null, slab: null });
   });
 
   scene.add(makeDust(350, [-half, half], [0.2, H + 2], [zEnd, 0]));
+
+  // Ficha de proyecto: holograma que se desprende del panel de Proyectos y flota frente a él,
+  // proyectado desde un anillo de luz en el piso.
+  const pp = panels[2];
+  const fg = new THREE.Group(); fg.rotation.y = pp.group.rotation.y; fg.visible = false; scene.add(fg);
+  const floatWrap = document.createElement('div');
+  floatWrap.className = 'holo-wrap float';
+  floatWrap.innerHTML = '<div class="holo float-holo"><div class="float-in"></div></div>';
+  const floatCss = new CSS3DObject(floatWrap); floatCss.position.z = 0.03; fg.add(floatCss);
+  const projMat = new THREE.MeshBasicMaterial({ color: ACID, transparent: true, opacity: 0, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide });
+  const proj = new THREE.Group(); proj.visible = false; scene.add(proj);
+  const rings = [[0.78, 0.84], [0.5, 0.53], [1.02, 1.04]].map(([a, b]) => { const m = new THREE.Mesh(new THREE.RingGeometry(a, b, 72), projMat); m.rotation.x = -Math.PI / 2; m.position.y = 0.02; proj.add(m); return m; });
+  const floatBeam = new THREE.Mesh(new THREE.CylinderGeometry(0.8, 1, 1, 64, 1, true), new THREE.MeshBasicMaterial({ map: beamTex, color: 0xeaff8a, transparent: true, opacity: 0, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide, fog: false }));
+  floatBeam.rotation.x = Math.PI; proj.add(floatBeam);
+  const float = { group: fg, css: floatCss, wrap: floatWrap, proj, beam: floatBeam, rings, projMat, center: new V3(), normal: pp.normal, along: pp.along, w: 0, h: 0, frame: null };
+  function layoutFloat(portrait) {
+    const [pxW, pxH, s] = portrait ? [760, 1240, 0.0031] : [880, 1000, 0.0034];
+    const w = pxW * s, h = pxH * s, cy = (portrait ? 0.5 : 0.55) + h / 2;
+    float.w = w; float.h = h;
+    float.center.copy(pp.center).addScaledVector(pp.normal, 2.2); float.center.y = cy;
+    fg.position.copy(float.center);
+    floatWrap.classList.toggle('portrait', portrait);
+    floatCss.scale.setScalar(s);
+    if (float.frame) { fg.remove(float.frame); float.frame.traverse((o) => o.geometry?.dispose()); }
+    const f = new THREE.Group(), hw = w / 2 + 0.06, hh = h / 2 + 0.06, c = 0.35;
+    // Esquinas de luz, al estilo de un visor holográfico.
+    for (const [sx, sy] of [[-1, -1], [1, -1], [1, 1], [-1, 1]]) {
+      f.add(bar(new V3(sx * hw, sy * hh, 0), new V3(sx * (hw - c), sy * hh, 0), 0.035, neonMat));
+      f.add(bar(new V3(sx * hw, sy * hh, 0), new V3(sx * hw, sy * (hh - c), 0), 0.035, neonMat));
+    }
+    fg.add(f); float.frame = f;
+    proj.position.set(float.center.x, 0, float.center.z);
+    const beamH = cy - h / 2;
+    // Cono de luz: angosto en el anillo del piso, ancho bajo la ficha (girado: la parte brillante abajo).
+    floatBeam.geometry.dispose();
+    floatBeam.geometry = new THREE.CylinderGeometry(0.82, w / 2 - 0.1, beamH, 64, 1, true);
+    floatBeam.position.y = beamH / 2;
+  }
 
   // Formato del holograma: horizontal (1200×720 px) o vertical (800×1240 px) según la pantalla.
   const slabMat = new THREE.MeshStandardMaterial({ color: '#0e1706', emissive: '#283a05', emissiveIntensity: 0.6, roughness: 0.15, metalness: 0.2, transparent: true, opacity: 0.42, depthWrite: false });
@@ -429,11 +470,13 @@ function buildInterior() {
       const f = new THREE.Group();
       const hw = w / 2 + 0.15, hh = h / 2 + 0.14;
       p.slab = new THREE.Mesh(new THREE.BoxGeometry(hw * 2, hh * 2, 0.08), slabMat.clone()); f.add(p.slab);
+      if (p.light) { p.slab.material.color.set('#d4d6d5'); p.slab.material.emissive.set('#3c3e3d'); }
       for (const [a, b] of [[[-hw, -hh], [hw, -hh]], [[hw, -hh], [hw, hh]], [[hw, hh], [-hw, hh]], [[-hw, hh], [-hw, -hh]]]) f.add(bar(new V3(a[0], a[1], 0), new V3(b[0], b[1], 0), 0.06, neonMat));
       f.add(bar(new V3(-hw, -cy + 0.02, 0), new V3(hw, -cy + 0.02, 0), 0.05, neonMat));
       p.group.add(f); p.frame = f;
       p.obstacle.a.copy(p.center).addScaledVector(p.along, -hw); p.obstacle.b.copy(p.center).addScaledVector(p.along, hw);
     }
+    layoutFloat(portrait);
   }
 
   // Áreas caminables: cada sala + el paso por cada puerta.
@@ -446,7 +489,7 @@ function buildInterior() {
   marker.rotation.x = -Math.PI / 2; marker.position.y = 0.03; floorDecals.add(marker);
 
   return {
-    scene, panels, rects, obstacles, marker, mirror, layoutPanels,
+    scene, panels, float, rects, obstacles, marker, mirror, layoutPanels,
     update(t) {
       eyes.forEach((e, i) => (e.material.emissiveIntensity = 3.4 + 0.9 * Math.sin(t * 1.3 + i)));
       doors.forEach((d, i) => (d.light.intensity = (d.k === NWALL - 1 ? 30 : 16) + 3 * Math.sin(t * 1.1 + i)));
@@ -477,7 +520,7 @@ function applyOrbit() { orbitPos(orbit, camera.position); camera.lookAt(orbit.ta
 applyOrbit();
 
 // ---------------------------------------------------------------- Jugador interior
-const player = { pos: new V3(doorX(0), EYE, -2), yaw: 0, pitch: 0, room: 0, bob: 0 };
+const player = { pos: new V3(doorX(0), EYE, -2), yaw: 0, pitch: 0, room: 0 };
 let flight = null;    // recorrido animado entre salas
 let walkTarget = null; // destino del clic en el piso
 let atPanel = null;    // sala cuyo holograma está encuadrado (para reencuadrar al rotar la pantalla)
@@ -513,10 +556,10 @@ function updateWalk(dt) {
     else { mx = dx / dist; mz = dz / dist; const want = Math.atan2(-dx, -dz); player.yaw += angleDiff(want, player.yaw) * Math.min(1, dt * 3); }
   }
   if (mx || mz) {
-    atPanel = null;
+    atPanel = null; zoomDist = null;
     const ok = tryMove(mx * speed * dt, mz * speed * dt);
     if (!ok) walkTarget = null;
-    player.bob += dt * speed * 1.6;
+    player.pitch += (0.04 - player.pitch) * Math.min(1, dt * 3); // al caminar, mirada al frente
   }
   if (player.pos.z > 0.35) { exitHouse(); return; }
 }
@@ -524,7 +567,7 @@ const angleDiff = (a, b) => { let d = a - b; while (d > Math.PI) d -= Math.PI * 
 
 function applyPlayerCamera() {
   camera.position.copy(player.pos);
-  camera.position.y = EYE + (reduceMotion ? 0 : Math.sin(player.bob) * 0.035);
+  camera.position.y = EYE;
   camera.rotation.set(player.pitch, player.yaw, 0);
 }
 
@@ -543,14 +586,13 @@ function panelFit(p) {
   const view = p.center.clone().addScaledVector(p.normal, dist); view.y = EYE;
   // Centro del área libre en coordenadas de pantalla (NDC), para inclinar la mirada hacia ahí.
   const ndcY = 1 - (2 * (top + (innerHeight - top - bottom) / 2)) / innerHeight;
-  const pitch = Math.atan2(p.center.y - EYE, dist) - Math.atan(ndcY * tanV);
+  const pitchAt = (d) => Math.atan2(p.center.y - EYE, d) - Math.atan(ndcY * tanV) * Math.min(1, d / dist);
   const yaw = Math.atan2(p.normal.x, p.normal.z);
-  return { view, pitch, yaw };
+  return { view, pitch: pitchAt(dist), yaw, dist, pitchAt };
 }
 
 // Recorrido animado: atraviesa las puertas hasta quedar frente al holograma.
-function flyToRoom(i, instant = false) {
-  const p = int.panels[i];
+function flyToRoom(i, instant = false, p = int.panels[i]) {
   const from = player.pos.clone(); from.y = EYE;
   const pts = [from];
   let cur = roomAt(from.z);
@@ -563,7 +605,7 @@ function flyToRoom(i, instant = false) {
   }
   const { view, pitch: wantPitch, yaw: wantYaw } = panelFit(p);
   pts.push(view);
-  walkTarget = null; atPanel = i;
+  walkTarget = null; atPanel = i; zoomDist = null;
   if (instant || reduceMotion) { player.pos.copy(view); player.yaw = wantYaw; player.pitch = wantPitch; return; }
   const curve = new THREE.CatmullRomCurve3(pts, false, 'centripetal');
   const length = curve.getLength();
@@ -583,7 +625,6 @@ function updateFlight(now) {
   yaw = yaw + angleDiff(flight.wantYaw, yaw) * ease(blendOut);
   player.yaw = yaw;
   player.pitch = flight.pitch0 * (1 - blendIn) + flight.wantPitch * ease(blendOut);
-  player.bob += 0.12;
   if (k >= 1) flight = null;
 }
 
@@ -644,22 +685,98 @@ function exitHouse() {
 
 // ---------------------------------------------------------------- Navegación
 function goTo(id) {
-  closeMenu();
+  closeMenu(); closeProject(true);
   if (id === 'exterior') { if (mode === 'interior') exitHouse(); return; }
   const i = ROOMS.findIndex((r) => r.id === id);
   if (i < 0) return;
   if (mode === 'exterior') enterHouse(i);
   else if (mode === 'interior') flyToRoom(i);
 }
-// Páginas internas de proyectos: se abren dentro del holograma de Proyectos.
+// ---------------------------------------------------------------- Fichas de proyecto flotantes
+let floatOpen = null, carTimer = null;
+function openProject(id) {
+  const art = document.querySelector(`#sec-proyectos .project-detail[data-project="${id}"]`);
+  if (!art || mode !== 'interior') return;
+  const fl = int.float, inner = fl.wrap.querySelector('.float-in');
+  inner.replaceChildren();
+  const x = document.createElement('button');
+  x.type = 'button'; x.className = 'float-x'; x.setAttribute('aria-label', 'Cerrar'); x.textContent = '×';
+  const car = document.createElement('div'); car.className = 'carousel';
+  const dots = document.createElement('div'); dots.className = 'car-dots';
+  [...art.querySelectorAll('.detail-media img')].forEach((im, k) => {
+    const img = document.createElement('img');
+    img.className = 'slide' + (k ? '' : ' on'); img.src = im.src; img.alt = im.alt;
+    car.appendChild(img);
+    const d = document.createElement('button'); d.type = 'button'; d.className = 'car-dot' + (k ? '' : ' on'); d.dataset.i = k;
+    d.setAttribute('aria-label', `Imagen ${k + 1}`); dots.appendChild(d);
+  });
+  for (const [cls, label, txt] of [['prev', 'Imagen anterior', '‹'], ['next', 'Imagen siguiente', '›']]) {
+    const b = document.createElement('button'); b.type = 'button'; b.className = 'car-btn ' + cls; b.setAttribute('aria-label', label); b.textContent = txt; car.appendChild(b);
+  }
+  car.appendChild(dots);
+  inner.append(x, car, art.querySelector('.detail-copy').cloneNode(true));
+  inner.scrollTop = 0;
+  const wasOpen = floatOpen; floatOpen = id;
+  fl.wrap.classList.remove('closing', 'opening'); void fl.wrap.offsetWidth; fl.wrap.classList.add('opening');
+  fl.group.visible = true; fl.proj.visible = true;
+  if (!wasOpen) tween(800, (k) => {
+    const e = ease(k);
+    fl.group.scale.set(Math.max(0.02, ease(Math.min(1, k * 1.5))), Math.max(0.02, ease(Math.max(0, (k - 0.2) / 0.8))), 1);
+    fl.beam.material.opacity = 0.32 * e; fl.projMat.opacity = 0.9 * e;
+  });
+  startCarousel();
+  hideTip();
+  flyToRoom(2, false, fl);
+}
+function closeProject(instant = false) {
+  if (!floatOpen) return;
+  floatOpen = null; stopCarousel();
+  const fl = int.float;
+  const hide = () => { if (!floatOpen) { fl.group.visible = false; fl.proj.visible = false; } };
+  if (instant) { fl.group.scale.set(1, 1, 1); hide(); return; }
+  fl.wrap.classList.remove('opening'); fl.wrap.classList.add('closing');
+  tween(450, (k) => {
+    const e = 1 - ease(k);
+    fl.group.scale.set(Math.max(0.02, e), Math.max(0.02, e * e), 1);
+    fl.beam.material.opacity = 0.32 * e; fl.projMat.opacity = 0.9 * e;
+  }, () => { fl.group.scale.set(1, 1, 1); hide(); });
+  if (mode === 'interior' && atPanel === 2) flyToRoom(2);
+}
+function showSlide(i) {
+  const car = int.float.wrap.querySelector('.carousel');
+  if (!car) return;
+  const slides = car.querySelectorAll('.slide'), dots = car.querySelectorAll('.car-dot');
+  const n = slides.length, next = ((i % n) + n) % n;
+  slides.forEach((s, k) => s.classList.toggle('on', k === next));
+  dots.forEach((d, k) => d.classList.toggle('on', k === next));
+  car.dataset.i = next;
+}
+function startCarousel() { stopCarousel(); if (!reduceMotion) carTimer = setInterval(() => showSlide(+(int.float.wrap.querySelector('.carousel')?.dataset.i || 0) + 1), 3500); }
+function stopCarousel() { clearInterval(carTimer); carTimer = null; }
+
+// Clics sobre los hologramas 3D
 document.addEventListener('click', (e) => {
-  const open = e.target.closest('[data-open]'), close = e.target.closest('[data-close]');
-  if (!open && !close) return;
-  const root = (open || close).closest('.holo-in');
-  root.querySelector('.projects-list').hidden = !!open;
-  root.querySelectorAll('.project-detail').forEach((d) => (d.hidden = !open || d.dataset.project !== open.dataset.open));
-  root.scrollTop = 0;
-  (open ? root.querySelector('.project-detail:not([hidden]) .back') : root.querySelector(`[data-open="${close.closest('.project-detail').dataset.project}"]`))?.focus({ preventScroll: true });
+  if (!e.target.closest('#css-layer')) return;
+  if (e.target.closest('.float')) {
+    const btn = e.target.closest('.car-btn, .car-dot');
+    if (btn) {
+      const cur = +(int.float.wrap.querySelector('.carousel').dataset.i || 0);
+      showSlide(btn.classList.contains('car-dot') ? +btn.dataset.i : cur + (btn.classList.contains('next') ? 1 : -1));
+      startCarousel();
+      return;
+    }
+    if (e.target.closest('a, input, textarea')) return;
+    closeProject(); // clic sobre la ficha: se oculta
+    return;
+  }
+  const open = e.target.closest('[data-open]');
+  if (open) { openProject(open.dataset.open); return; }
+  // Clic en un panel que no está encuadrado: la cámara se acerca y lo encuadra.
+  const wrap = e.target.closest('.holo-wrap');
+  if (wrap && mode === 'interior' && !flight && !e.target.closest('a, button, input, textarea, label')) {
+    const i = ROOMS.findIndex((r) => r.id === wrap.dataset.room);
+    if (i >= 0 && atPanel !== i) flyToRoom(i);
+  }
 });
 document.addEventListener('click', (e) => {
   const g = e.target.closest('[data-go]');
@@ -752,7 +869,7 @@ canvas.addEventListener('pointermove', (e) => {
     if (orbit.auto) { orbit.auto = false; syncOrbitBtn(); }
   } else if (mode === 'interior' && !flight) {
     const k = isTouch ? 0.0055 : 0.0032;
-    player.yaw += dx * k; player.pitch = THREE.MathUtils.clamp(player.pitch + dy * k, -1.1, 1.1);
+    player.yaw += dx * k; // solo eje horizontal
   }
 });
 const endDrag = (e) => {
@@ -772,23 +889,74 @@ function handleClick(e) {
     return;
   }
   if (mode !== 'interior' || flight) return;
+  if (floatOpen) { closeProject(); return; }
   const hitPanel = raycaster.intersectObjects(int.panels.map((p) => p.slab), false)[0];
   if (hitPanel) { const p = int.panels.find((q) => q.slab === hitPanel.object); flyToRoom(p.room); return; }
   const hit = raycaster.intersectObject(int.mirror, false)[0];
   if (hit && hit.distance < 40) {
+    zoomDist = null;
     walkTarget = new V3(hit.point.x, 0, hit.point.z);
     int.marker.position.set(hit.point.x, 0.03, hit.point.z);
     int.marker.material.opacity = 1; int.marker.scale.setScalar(1);
   }
 }
-canvas.addEventListener('wheel', (e) => {
-  e.preventDefault();
-  if (mode === 'exterior') orbit.r = THREE.MathUtils.clamp(orbit.r + e.deltaY * 0.022, 16, 58);
-  else if (mode === 'interior' && !flight) {
-    const step = THREE.MathUtils.clamp(-e.deltaY * 0.01, -1.2, 1.2);
-    tryMove(-Math.sin(player.yaw) * step, -Math.cos(player.yaw) * step);
+let zoomDist = null; // distancia elegida al holograma encuadrado (null = encuadre automático)
+const zoomTarget = () => (floatOpen ? int.float : atPanel != null ? int.panels[atPanel] : null);
+function zoomBy(delta) {
+  if (mode !== 'interior' || flight) return;
+  hideTip();
+  const p = zoomTarget();
+  if (!p) { const step = THREE.MathUtils.clamp(-delta * 2.5, -1.2, 1.2); tryMove(-Math.sin(player.yaw) * step, -Math.cos(player.yaw) * step); return; }
+  const fit = panelFit(p);
+  const min = Math.max(1.3, fit.dist * 0.4), max = fit.dist + 2.5;
+  let d = THREE.MathUtils.clamp((zoomDist ?? fit.dist) + delta, min, max);
+  const at = (dd) => p.center.clone().addScaledVector(p.normal, dd);
+  while (d > min && !walkable(at(d).x, at(d).z)) d -= 0.1; // no atravesar paredes
+  zoomDist = d;
+}
+function updateZoom(dt) {
+  const p = zoomTarget();
+  if (zoomDist == null || !p || flight || walkTarget) return;
+  const fit = panelFit(p), want = p.center.clone().addScaledVector(p.normal, zoomDist);
+  const k = Math.min(1, dt * 7);
+  player.pos.x += (want.x - player.pos.x) * k; player.pos.z += (want.z - player.pos.z) * k;
+  player.yaw += angleDiff(fit.yaw, player.yaw) * k;
+  player.pitch += (fit.pitchAt(zoomDist) - player.pitch) * k;
+}
+addEventListener('wheel', (e) => {
+  if (mode === 'exterior') {
+    if (e.target !== canvas) return;
+    e.preventDefault(); orbit.r = THREE.MathUtils.clamp(orbit.r + e.deltaY * 0.022, 16, 58); return;
   }
+  if (mode !== 'interior' || e.target.closest?.('.topbar, .map-box')) return;
+  const sc = e.target.closest?.('#css-layer .holo-in, #css-layer .float-in');
+  if (sc) { // primero se desplaza el contenido del holograma; al llegar al borde, acerca o aleja
+    const can = e.deltaY > 0 ? sc.scrollTop + sc.clientHeight < sc.scrollHeight - 1 : sc.scrollTop > 0;
+    if (can) return;
+  }
+  e.preventDefault();
+  zoomBy(THREE.MathUtils.clamp(e.deltaY * 0.004, -0.8, 0.8));
 }, { passive: false });
+$('#zoomIn').addEventListener('click', () => zoomBy(-0.9));
+$('#zoomOut').addEventListener('click', () => zoomBy(0.9));
+// Pellizco con dos dedos para acercar y alejar.
+const touches = new Map();
+let pinch = null;
+canvas.addEventListener('pointerdown', (e) => {
+  if (e.pointerType !== 'touch') return;
+  touches.set(e.pointerId, { x: e.clientX, y: e.clientY });
+  if (touches.size === 2) { const [a, b] = [...touches.values()]; pinch = Math.hypot(a.x - b.x, a.y - b.y); drag = null; }
+});
+canvas.addEventListener('pointermove', (e) => {
+  if (!touches.has(e.pointerId)) return;
+  touches.set(e.pointerId, { x: e.clientX, y: e.clientY });
+  if (touches.size === 2 && pinch) {
+    const [a, b] = [...touches.values()], d = Math.hypot(a.x - b.x, a.y - b.y);
+    zoomBy((pinch - d) * 0.012); pinch = d;
+  }
+});
+const endTouch = (e) => { touches.delete(e.pointerId); if (touches.size < 2) pinch = null; };
+canvas.addEventListener('pointerup', endTouch); canvas.addEventListener('pointercancel', endTouch);
 
 addEventListener('keydown', (e) => {
   if (e.key === 'Escape') { closeMenu(); return; }
@@ -838,21 +1006,26 @@ mm.addEventListener('click', (e) => {
 });
 
 // ---------------------------------------------------------------- Hologramas: visibilidad
-const camDir = new V3();
 function updatePanels(dt) {
-  camera.getWorldDirection(camDir);
   for (const p of int.panels) {
     const rel = camera.position.clone().sub(p.center);
-    const front = rel.dot(p.normal);
-    const sameRoom = p.room === player.room;
-    const want = sameRoom && front > 0.4 && rel.length() < 17 ? 1 : 0;
+    const dist = rel.length(), front = rel.dot(p.normal);
+    const near = p.shown ? dist < 19 && front > 0.2 : dist < 16 && front > 0.5; // histéresis: no titila en el borde
+    p.shown = p.room === player.room && near;
+    const want = p.shown ? (floatOpen && p.room === 2 ? 0.14 : 1) : 0;
     p.opacity += (want - p.opacity) * Math.min(1, dt * 6);
-    const visible = p.opacity > 0.02;
-    p.css.visible = visible;
-    if (visible) p.wrap.style.opacity = p.opacity.toFixed(3);
-    p.wrap.style.pointerEvents = p.opacity > 0.6 ? 'auto' : 'none';
+    if (Math.abs(want - p.opacity) < 0.004) p.opacity = want;
+    const o = Math.round(p.opacity * 100) / 100;
+    if (o !== p.lastO) { p.lastO = o; p.wrap.style.opacity = o; }
+    const vis = o > 0.01;
+    if (p.css.visible !== vis) p.css.visible = vis;
+    const pe = o > 0.6 ? 'auto' : 'none';
+    if (pe !== p.pe) { p.pe = pe; p.wrap.style.pointerEvents = pe; }
     p.slab.material.opacity = 0.18 + 0.3 * (1 - p.opacity);
   }
+  const fl = int.float;
+  fl.css.visible = fl.group.visible && player.room === 2;
+  if (fl.group.visible) fl.rings.forEach((r, i) => (r.rotation.z += (i % 2 ? -0.4 : 0.6) * dt));
 }
 
 // ---------------------------------------------------------------- HUD de sala
@@ -877,7 +1050,7 @@ function frame(now) {
   }
   if (scene === ext.scene) ext.update(t);
   if (scene === int.scene) {
-    if (mode === 'interior') { updateFlight(now); updateWalk(dt); }
+    if (mode === 'interior') { updateFlight(now); updateWalk(dt); updateZoom(dt); }
     if (mode !== 'transition' || player.pos.z < 0) applyPlayerCamera();
     updatePanels(dt);
     updateRoomHUD();
@@ -897,8 +1070,8 @@ addEventListener('resize', () => {
   cssRenderer.setSize(innerWidth, innerHeight);
   if (wantPortrait() !== portraitLayout) { portraitLayout = wantPortrait(); int.layoutPanels(portraitLayout); }
   if (atPanel != null && !flight && mode === 'interior') {
-    const f = panelFit(int.panels[atPanel]);
-    player.pos.copy(f.view); player.yaw = f.yaw; player.pitch = f.pitch;
+    const f = panelFit(zoomTarget());
+    player.pos.copy(f.view); player.yaw = f.yaw; player.pitch = f.pitch; zoomDist = null;
   }
 });
 

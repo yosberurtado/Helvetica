@@ -65,6 +65,10 @@
 <!-- Interior: controles mínimos -->
 <section class="int-ui" id="intUI" hidden>
   <div class="map-box">
+    <div class="zoom">
+      <button type="button" class="icon-btn" id="zoomOut" aria-label="Alejar" title="Alejar"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14" fill="none" stroke="currentColor" stroke-width="2"/></svg></button>
+      <button type="button" class="icon-btn" id="zoomIn" aria-label="Acercar" title="Acercar"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M12 5v14" fill="none" stroke="currentColor" stroke-width="2"/></svg></button>
+    </div>
     <canvas id="minimap" width="240" height="64" aria-hidden="true"></canvas>
   </div>
   <p class="tip" id="tip" aria-live="polite" hidden></p>
@@ -164,7 +168,6 @@
 
     <!-- Páginas internas de proyectos -->
     <article class="project-detail" data-project="de-todo-chile" hidden>
-      <button type="button" class="back" data-close aria-label="Volver a Proyectos">← Proyectos</button>
       <div class="detail-grid">
         <div class="detail-media">
           <img src="assets/proyectos/de-todo-chile-principal.jpg" alt="Personajes de De Todo Chile" width="1024" height="1024">
@@ -186,11 +189,11 @@
     </article>
 
     <article class="project-detail" data-project="bombus-chilensis" hidden>
-      <button type="button" class="back" data-close aria-label="Volver a Proyectos">← Proyectos</button>
       <div class="detail-grid">
         <div class="detail-media">
           <img src="assets/proyectos/bombus-chilensis-principal.jpg" alt="Personaje de Bombus Chilensis" width="1200" height="800">
           <img src="assets/proyectos/bombus-chilensis.jpg" alt="Bombus Chilensis" width="500" height="700">
+          <img src="assets/servicios/relatos-y-personajes.jpg" alt="Personajes de Bombus Chilensis" width="768" height="491">
         </div>
         <div class="detail-copy">
           <h3 class="display small">Bombus Chilensis</h3>
@@ -206,11 +209,11 @@
     </article>
 
     <article class="project-detail" data-project="olivia-home" hidden>
-      <button type="button" class="back" data-close aria-label="Volver a Proyectos">← Proyectos</button>
       <div class="detail-grid">
         <div class="detail-media">
           <img src="assets/proyectos/olivia-home-principal.jpg" alt="Dispositivo Lomi de Olivia Home" width="733" height="506">
           <img src="assets/proyectos/olivia-home.jpg" alt="Olivia Home" width="500" height="700">
+          <img src="assets/servicios/estrategia-y-creatividad.jpg" alt="Olivia Home en distintas pantallas" width="768" height="724">
         </div>
         <div class="detail-copy">
           <h3 class="display small">Olivia Home</h3>
@@ -226,7 +229,6 @@
     </article>
 
     <article class="project-detail" data-project="zappy-el-quirincho" hidden>
-      <button type="button" class="back" data-close aria-label="Volver a Proyectos">← Proyectos</button>
       <div class="detail-grid">
         <div class="detail-media">
           <img src="assets/proyectos/zappy-el-quirincho-principal.jpg" alt="Zappy, el Quirincho" width="927" height="1200">
