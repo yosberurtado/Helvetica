@@ -289,13 +289,16 @@ function buildInterior() {
 
   // Paredes laterales y techo a dos aguas.
   const half = W / 2, slope = R / half, nl = Math.hypot(slope, 1);
+  const solids = [], doorHits = []; // para los clics: paredes que tapan y puertas que llevan a otra sala
+  const solid = (m) => { solids.push(m); scene.add(m); return m; };
+  const doorPart = (m, k) => { m.userData.door = k; doorHits.push(m); scene.add(m); return m; };
   const sides = [-1, 1];
   for (const s of sides) {
-    scene.add(new THREE.Mesh(facetSurface({
+    solid(new THREE.Mesh(facetSurface({
       u0: zEnd - 1.5, u1: 1.5, v0: -0.3, v1: H + 1.4, cell: 2.6, amp: 0.13, bias: 0.3, wave: 0.3, jitter: 0.14, seed: s > 0 ? 3 : 5,
       map: (u, v, d) => [s * (half + 0.7 - d), v, u],
     }), wallMat));
-    scene.add(new THREE.Mesh(facetSurface({
+    solid(new THREE.Mesh(facetSurface({
       u0: -1.6, u1: half + 0.8, v0: zEnd - 1.5, v1: 1.5, cell: 2.8, amp: 0.16, bias: 0.15, wave: 0.3, jitter: 0.14, seed: s > 0 ? 7 : 11,
       map: (u, v, d) => [s * (half - u) - s * (slope / nl) * d, H + slope * u - d / nl, v],
     }), darkWallMat));
@@ -306,7 +309,7 @@ function buildInterior() {
   const ringMat = wallMat.clone(); ringMat.color.set('#c9c9c6');
   for (let k = 0; k < NWALL; k++) {
     const zw = -k * D, dx = doorX(k), hole = doorPoly(dx, 0.12);
-    scene.add(new THREE.Mesh(facetSurface({
+    solid(new THREE.Mesh(facetSurface({
       u0: -half - 1.2, u1: half + 1.2, v0: -0.3, v1: H + R + 0.8, cell: 1.05, amp: 0.1, wave: 0.4, jitter: 0.1, seed: 20 + k,
       map: (u, v, d) => [u, v, zw + d], hole: (u, v) => pointInPoly(u, v, hole),
     }), wallMat));
@@ -315,13 +318,16 @@ function buildInterior() {
     const sh = new THREE.Shape(outer.map(([x, y]) => new THREE.Vector2(x, Math.max(y, 0))));
     sh.holes.push(new THREE.Path(inner.map(([x, y]) => new THREE.Vector2(x, Math.max(y, 0))).reverse()));
     const ring = new THREE.Mesh(new THREE.ExtrudeGeometry(sh, { depth: 1.15, bevelEnabled: false }), ringMat);
-    ring.position.z = zw - 0.575; scene.add(ring);
+    ring.position.z = zw - 0.575; doorPart(ring, k);
     // Neón en ambas caras del vano.
     const P = inner.map(([x, y]) => [x, Math.max(y, 0)]);
     for (const zf of [zw + 0.6, zw - 0.6]) {
-      for (const [a, b] of [[P[1], P[2]], [P[2], P[3]], [P[3], P[4]], [P[4], P[0]]]) scene.add(bar(new V3(a[0], a[1], zf), new V3(b[0], b[1], zf), 0.07, neonMat));
+      for (const [a, b] of [[P[1], P[2]], [P[2], P[3]], [P[3], P[4]], [P[4], P[0]]]) doorPart(bar(new V3(a[0], a[1], zf), new V3(b[0], b[1], zf), 0.07, neonMat), k);
       const sill = bar(new V3(dx - DOOR_W, 0.02, zf), new V3(dx + DOOR_W, 0.02, zf), 0.05, neonMat); scene.add(sill);
     }
+    // Zona invisible que cubre el vano: un clic en la puerta lleva a la sala del otro lado.
+    const doorZone = new THREE.Mesh(new THREE.ShapeGeometry(new THREE.Shape(P.map(([x, y]) => new THREE.Vector2(x, y)))), new THREE.MeshBasicMaterial({ transparent: true, opacity: 0, depthWrite: false, side: THREE.DoubleSide }));
+    doorZone.position.z = zw; doorPart(doorZone, k);
     const sealed = k === NWALL - 1, exit = k === 0;
     if (sealed || exit) {
       // Portal de luz: salida al exterior (k=0) o luz de fondo de la última sala.
@@ -489,7 +495,7 @@ function buildInterior() {
   marker.rotation.x = -Math.PI / 2; marker.position.y = 0.03; floorDecals.add(marker);
 
   return {
-    scene, panels, float, rects, obstacles, marker, mirror, layoutPanels,
+    scene, panels, float, rects, obstacles, marker, mirror, solids, doorHits, layoutPanels,
     update(t) {
       eyes.forEach((e, i) => (e.material.emissiveIntensity = 3.4 + 0.9 * Math.sin(t * 1.3 + i)));
       doors.forEach((d, i) => (d.light.intensity = (d.k === NWALL - 1 ? 30 : 16) + 3 * Math.sin(t * 1.1 + i)));
@@ -916,15 +922,27 @@ function handleClick(e) {
   }
   if (mode !== 'interior' || flight) return;
   if (floatOpen) { closeProject(); return; }
-  const hitPanel = raycaster.intersectObjects(int.panels.map((p) => p.slab), false)[0];
-  if (hitPanel) { const p = int.panels.find((q) => q.slab === hitPanel.object); flyToRoom(p.room); return; }
-  const hit = raycaster.intersectObject(int.mirror, false)[0];
-  if (hit && hit.distance < 40) {
-    zoomDist = null;
-    walkTarget = new V3(hit.point.x, 0, hit.point.z);
-    int.marker.position.set(hit.point.x, 0.03, hit.point.z);
-    int.marker.material.opacity = 1; int.marker.scale.setScalar(1);
-  }
+  const slabs = int.panels.map((p) => p.slab);
+  const hit = raycaster.intersectObjects([int.mirror, ...int.solids, ...int.doorHits, ...slabs], false)[0];
+  if (!hit || hit.distance > 40) return;
+  const o = hit.object;
+  if (o.userData.door != null) { goThroughDoor(o.userData.door); return; }
+  const slab = int.panels.find((p) => p.slab === o);
+  if (slab) { flyToRoom(slab.room); return; }
+  if (o !== int.mirror) return; // pared o techo: no hace nada
+  const r = roomAt(hit.point.z);
+  if (r !== player.room) { flyToRoom(r); return; } // piso de otra sala visto por la puerta
+  zoomDist = null;
+  walkTarget = new V3(hit.point.x, 0, hit.point.z);
+  int.marker.position.set(hit.point.x, 0.03, hit.point.z);
+  int.marker.material.opacity = 1; int.marker.scale.setScalar(1);
+}
+// Puerta k une la sala k-1 con la sala k (la puerta 0 es la salida; la última está cerrada).
+function goThroughDoor(k) {
+  if (k === 0) { if (player.room === 0) exitHouse(); return; }
+  if (k >= NWALL - 1) return;
+  const target = player.pos.z > -k * D ? k : k - 1;
+  flyToRoom(target);
 }
 let zoomDist = null; // distancia elegida al holograma encuadrado (null = encuadre automático)
 const zoomTarget = () => (floatOpen ? int.float : atPanel != null ? int.panels[atPanel] : null);
