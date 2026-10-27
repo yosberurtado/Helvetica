@@ -605,7 +605,7 @@ function flyToRoom(i, instant = false, p = int.panels[i]) {
   }
   const { view, pitch: wantPitch, yaw: wantYaw } = panelFit(p);
   pts.push(view);
-  walkTarget = null; atPanel = i; zoomDist = null;
+  walkTarget = null; atPanel = i; zoomDist = null; yawVel = 0;
   if (instant || reduceMotion) { player.pos.copy(view); player.yaw = wantYaw; player.pitch = wantPitch; return; }
   const curve = new THREE.CatmullRomCurve3(pts, false, 'centripetal');
   const length = curve.getLength();
@@ -852,34 +852,60 @@ document.addEventListener('submit', (e) => {
 // ---------------------------------------------------------------- Entrada: puntero, rueda, teclado
 const raycaster = new THREE.Raycaster();
 const ndc = new THREE.Vector2();
-let drag = null;
-canvas.addEventListener('pointerdown', (e) => {
+// Arrastre para girar: funciona sobre la escena y también sobre los hologramas
+// (si no, cuando un panel ocupa la pantalla no hay dónde arrastrar). Al soltar, el giro sigue
+// un instante con inercia para que se sienta fluido.
+let drag = null, yawVel = 0, suppressClick = false;
+const YAW_K = isTouch ? 0.0055 : 0.0034;
+function startDrag(e, onPanel) {
   if (e.pointerType === 'mouse' && e.button !== 0) return;
-  drag = { x: e.clientX, y: e.clientY, sx: e.clientX, sy: e.clientY, moved: false, id: e.pointerId };
-  canvas.setPointerCapture(e.pointerId);
-});
-canvas.addEventListener('pointermove', (e) => {
-  if (!drag || e.pointerId !== drag.id) return;
-  const dx = e.clientX - drag.x, dy = e.clientY - drag.y;
-  drag.x = e.clientX; drag.y = e.clientY;
-  if (Math.hypot(e.clientX - drag.sx, e.clientY - drag.sy) > 5) { drag.moved = true; canvas.classList.add('dragging'); if (mode === 'interior') hideTip(); }
+  drag = { x: e.clientX, y: e.clientY, sx: e.clientX, sy: e.clientY, t: performance.now(), moved: false, id: e.pointerId, onPanel };
+  yawVel = 0;
+}
+canvas.addEventListener('pointerdown', (e) => { startDrag(e, false); canvas.setPointerCapture(e.pointerId); });
+document.addEventListener('pointerdown', (e) => {
+  if (mode !== 'interior' || !e.target.closest('#css-layer')) return;
+  if (e.target.closest('a, button, input, textarea, select, label')) return; // los controles funcionan normal
+  if (e.pointerType === 'mouse') e.preventDefault(); // evita seleccionar texto o arrastrar imágenes
+  startDrag(e, true);
+}, true);
+addEventListener('pointermove', (e) => {
+  if (!drag || e.pointerId !== drag.id || pinch) return;
+  const now = performance.now();
+  const dx = e.clientX - drag.x, dy = e.clientY - drag.y, dt = Math.max(1, now - drag.t) / 1000;
+  drag.x = e.clientX; drag.y = e.clientY; drag.t = now;
+  if (!drag.moved && Math.hypot(e.clientX - drag.sx, e.clientY - drag.sy) > 6) { drag.moved = true; canvas.classList.add('dragging'); if (mode === 'interior') hideTip(); }
   if (!drag.moved) return;
   if (mode === 'exterior') {
     orbit.az -= dx * 0.006; orbit.el = THREE.MathUtils.clamp(orbit.el + dy * 0.004, -0.05, 1.0);
     if (orbit.auto) { orbit.auto = false; syncOrbitBtn(); }
-  } else if (mode === 'interior' && !flight) {
-    const k = isTouch ? 0.0055 : 0.0032;
-    player.yaw += dx * k; // solo eje horizontal
+  } else if (mode === 'interior') {
+    if (flight) flight = null; // el usuario toma el control
+    player.yaw += dx * YAW_K; // solo eje horizontal
+    yawVel = yawVel * 0.6 + ((dx * YAW_K) / dt) * 0.4;
   }
 });
 const endDrag = (e) => {
   if (!drag || e.pointerId !== drag.id) return;
-  const wasClick = !drag.moved;
+  const { moved, onPanel, t } = drag;
   drag = null; canvas.classList.remove('dragging');
-  if (wasClick) handleClick(e);
+  if (moved) {
+    // Si el dedo o el mouse se quedó quieto antes de soltar, no hay inercia.
+    yawVel = performance.now() - t > 90 ? 0 : THREE.MathUtils.clamp(yawVel, -4, 4);
+    if (onPanel) suppressClick = true; // soltar tras girar no es un clic sobre el panel
+  } else if (!onPanel) handleClick(e);
 };
-canvas.addEventListener('pointerup', endDrag);
-canvas.addEventListener('pointercancel', () => { drag = null; canvas.classList.remove('dragging'); });
+addEventListener('pointerup', endDrag);
+addEventListener('pointercancel', () => { drag = null; yawVel = 0; canvas.classList.remove('dragging'); });
+document.addEventListener('click', (e) => {
+  if (suppressClick) { suppressClick = false; e.stopPropagation(); e.preventDefault(); }
+}, true);
+function updateInertia(dt) {
+  if (drag || !yawVel) return;
+  player.yaw += yawVel * dt;
+  yawVel *= Math.exp(-dt * 5);
+  if (Math.abs(yawVel) < 0.02) yawVel = 0;
+}
 
 function handleClick(e) {
   ndc.set((e.clientX / innerWidth) * 2 - 1, -(e.clientY / innerHeight) * 2 + 1);
@@ -920,7 +946,6 @@ function updateZoom(dt) {
   const fit = panelFit(p), want = p.center.clone().addScaledVector(p.normal, zoomDist);
   const k = Math.min(1, dt * 7);
   player.pos.x += (want.x - player.pos.x) * k; player.pos.z += (want.z - player.pos.z) * k;
-  player.yaw += angleDiff(fit.yaw, player.yaw) * k;
   player.pitch += (fit.pitchAt(zoomDist) - player.pitch) * k;
 }
 addEventListener('wheel', (e) => {
@@ -1050,7 +1075,7 @@ function frame(now) {
   }
   if (scene === ext.scene) ext.update(t);
   if (scene === int.scene) {
-    if (mode === 'interior') { updateFlight(now); updateWalk(dt); updateZoom(dt); }
+    if (mode === 'interior') { updateFlight(now); updateWalk(dt); updateZoom(dt); updateInertia(dt); }
     if (mode !== 'transition' || player.pos.z < 0) applyPlayerCamera();
     updatePanels(dt);
     updateRoomHUD();

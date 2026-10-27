@@ -304,3 +304,9 @@ img{max-width:100%}
   .float.opening .float-holo,.float.opening .float-in,.float.closing .float-holo{animation:none}
   .slide{transition:opacity .2s}
 }
+
+/* Arrastrar sobre los hologramas también gira la vista */
+#css-layer .holo{user-select:none;-webkit-user-select:none;cursor:grab}
+#css-layer .holo img{-webkit-user-drag:none}
+#css-layer .holo a,#css-layer .holo button{cursor:pointer}
+#css-layer .holo input,#css-layer .holo textarea{user-select:text;-webkit-user-select:text;cursor:text}
