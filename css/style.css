@@ -38,7 +38,7 @@ img{max-width:100%}
 .topbar{position:fixed;z-index:10;top:0;left:0;right:0;display:flex;align-items:center;justify-content:space-between;gap:16px;padding:calc(16px + env(safe-area-inset-top,0px)) max(16px,3vw) 0}
 .brand{display:block;line-height:0}
 .brand img{height:40px;width:auto}
-.nav{display:flex;gap:2px;padding:5px;border:1px solid #daff0233;border-radius:40px;background:#070707cc;backdrop-filter:blur(10px)}
+.nav{display:flex;gap:2px;padding:5px;border:1px solid #daff0233;border-radius:40px;background:#070707e8} /* sin desenfoque de fondo: se recalcularía en cada cuadro sobre la escena 3D */
 .nav button{border:0;background:none;padding:9px 14px;border-radius:30px;font:500 11px var(--ui);letter-spacing:.12em;text-transform:uppercase;cursor:pointer;color:var(--muted);transition:background .2s,color .2s}
 .nav button:hover{color:var(--bone)}
 .nav button.on{background:var(--acid);color:var(--ink)}
@@ -50,6 +50,7 @@ img{max-width:100%}
 /* Menú de secciones: solo dentro de la casa; afuera queda la portada limpia. */
 .nav,.menu-btn{transition:opacity .45s,visibility .45s}
 body:not(.is-inside) .nav,body:not(.is-inside) .menu-btn{opacity:0;visibility:hidden;pointer-events:none}
+#world.over-door{cursor:pointer}
 
 /* ---------- Botones ---------- */
 .btn-solid,.btn-ghost{border-radius:40px;padding:13px 20px;font:600 11px var(--ui);letter-spacing:.14em;text-transform:uppercase;cursor:pointer;transition:transform .15s,background .2s,color .2s,box-shadow .2s}
@@ -96,11 +97,11 @@ body:not(.is-inside) .nav,body:not(.is-inside) .menu-btn{opacity:0;visibility:hi
 .sr-content{position:absolute!important;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);clip-path:inset(50%);white-space:nowrap}
 .holo-wrap{width:1200px;height:720px;pointer-events:auto;backface-visibility:hidden;-webkit-font-smoothing:antialiased}
 .holo{position:relative;width:100%;height:100%;overflow:hidden;color:var(--bone);font-family:var(--serif);
-  background:linear-gradient(160deg,#151515f2,#070707f7 50%,#121506f2);
+  background:radial-gradient(120% 90% at 50% 50%,transparent 62%,#daff021f 100%),linear-gradient(160deg,#151515f2,#070707f7 50%,#121506f2);
   border:3px solid var(--acid);border-radius:6px;
-  box-shadow:0 0 0 1px #f6fe9866 inset,0 0 70px #daff0240 inset,0 0 60px #daff0299,0 0 160px #b8d60a44}
+  box-shadow:0 0 0 1px #f6fe9866 inset} /* el brillo exterior lo pone el marco de neón 3D: sombras difusas aquí harían lento el recorrido */
 .holo::before{content:"";position:absolute;inset:0;pointer-events:none;z-index:2;
-  background:repeating-linear-gradient(180deg,#daff0206 0 2px,transparent 2px 5px),linear-gradient(115deg,#ffffff10,transparent 30%);mix-blend-mode:screen}
+  background:repeating-linear-gradient(180deg,#daff0206 0 2px,transparent 2px 5px),linear-gradient(115deg,#ffffff10,transparent 30%)}
 .holo::after{content:"";position:absolute;left:0;right:0;height:120px;top:0;transform:translateY(-130px);will-change:transform;pointer-events:none;z-index:2;
   background:linear-gradient(180deg,transparent,#daff0210,transparent);animation:sweep 7s linear infinite}
 @keyframes sweep{to{transform:translateY(1300px)}}
@@ -254,7 +255,7 @@ body:not(.is-inside) .nav,body:not(.is-inside) .menu-btn{opacity:0;visibility:hi
 
 /* ---------- Salas claras (Nosotros, Servicios): gris del logo con texto negro ---------- */
 .light .holo{color:var(--ink);background:linear-gradient(160deg,#e9ebeaf7,var(--logo-gray) 50%,#d2d5d3f7)}
-.light .holo::before{background:repeating-linear-gradient(180deg,#0707070a 0 2px,transparent 2px 5px);mix-blend-mode:multiply}
+.light .holo::before{background:repeating-linear-gradient(180deg,#0707070a 0 2px,transparent 2px 5px)}
 .light .holo::after{background:linear-gradient(180deg,transparent,#ffffff59,transparent)}
 .light .holo-in{scrollbar-color:var(--ink) transparent}
 .light .slash{align-self:flex-start;padding:2px 10px;background:var(--ink);color:var(--acid)}
@@ -268,7 +269,7 @@ body:not(.is-inside) .nav,body:not(.is-inside) .menu-btn{opacity:0;visibility:hi
 /* ---------- Ficha de proyecto flotante (holograma) ---------- */
 .holo-wrap.float{width:880px;height:1000px}
 .holo-wrap.float.portrait{width:760px;height:1240px}
-.float-holo{background:linear-gradient(180deg,#0d1305d1,#050703e6 60%,#0a0f04d1);border:2px solid #daff02cc;border-radius:4px;box-shadow:0 0 0 1px #f6fe9844 inset,0 0 90px #daff0230 inset,0 0 50px #daff0288}
+.float-holo{background:linear-gradient(180deg,#0d1305d1,#050703e6 60%,#0a0f04d1);border:2px solid #daff02cc;border-radius:4px;box-shadow:0 0 0 1px #f6fe9844 inset,0 0 24px #daff0266}
 .float-holo::before{background:repeating-linear-gradient(180deg,#daff020f 0 1px,transparent 1px 4px),linear-gradient(115deg,#ffffff12,transparent 35%)}
 .float-in{position:relative;z-index:1;height:100%;overflow-y:auto;overscroll-behavior:contain;touch-action:pan-y;padding:30px 36px 34px;display:flex;flex-direction:column;gap:16px;cursor:pointer;scrollbar-width:thin;scrollbar-color:var(--acid) transparent}
 .float-in>*{flex:none}

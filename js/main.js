@@ -249,6 +249,7 @@ function buildExterior() {
 
   return {
     scene, DEPTH, doorParts, mouthX, mouthTop: B[1],
+    doorTri: [A, B, C].map(([x, y]) => new V3(x, Math.max(y, 0), DEPTH + 0.1)),
     update(t) {
       eyes.forEach((e, i) => (e.material.emissiveIntensity = 2.3 + 0.7 * Math.sin(t * 1.4 + i * 0.7)));
       doorGlow.intensity = 14 + 3 * Math.sin(t * 1.1);
@@ -677,29 +678,59 @@ function flyToRoom(i, instant = false, p = int.panels[i]) {
   const fit = panelFit(p);
   walkPath = []; atPanel = i; zoomDist = null; yawVel = 0; player.liftWant = 0;
   if (instant || reduceMotion) { player.pos.copy(fit.view); player.yaw = fit.yaw; player.pitch = fit.pitch; player.lift = 0; flight = null; return; }
-  const pts = planPath(player.pos, fit.view);
+  const pts = roundCorners(planPath(player.pos, fit.view));
   const lens = [0];
   for (let k = 1; k < pts.length; k++) lens.push(lens[k - 1] + pts[k].distanceTo(pts[k - 1]));
   const length = lens[lens.length - 1];
-  const dur = THREE.MathUtils.clamp(length / 8, 0.7, 5) * 1000;
+  const dur = THREE.MathUtils.clamp(length / 9, 0.9, 6.5) * 1000;
   flight = { pts, lens, length, dur, start: performance.now(), wantYaw: fit.yaw, wantPitch: fit.pitch, last: performance.now() };
 }
+// Esquinas del recorrido redondeadas (curva corta), para que la cámara no cambie de dirección de golpe.
+function roundCorners(pts) {
+  if (pts.length < 3) return pts;
+  const out = [pts[0]];
+  for (let i = 1; i < pts.length - 1; i++) {
+    const a = pts[i - 1], p = pts[i], b = pts[i + 1];
+    const la = p.distanceTo(a), lb = p.distanceTo(b), r = Math.min(1, la * 0.45, lb * 0.45);
+    if (r < 0.05) { out.push(p); continue; }
+    const p0 = p.clone().lerp(a, r / la), p2 = p.clone().lerp(b, r / lb);
+    for (let k = 0; k <= 6; k++) {
+      const t = k / 6, u = 1 - t;
+      out.push(new V3(u * u * p0.x + 2 * u * t * p.x + t * t * p2.x, EYE, u * u * p0.z + 2 * u * t * p.z + t * t * p2.z));
+    }
+  }
+  out.push(pts[pts.length - 1]);
+  return out;
+}
+// Perfil de velocidad: acelera y frena suave, y en el tramo medio va a velocidad pareja (sin picos).
+const RAMP = 0.22, VMAX = 1 / (1 - RAMP);
+const cruise = (k) => {
+  const ramp = (x) => VMAX * RAMP * (x * x * x - (x * x * x * x) / 2); // velocidad sube en curva suave (smoothstep)
+  if (k < RAMP) return ramp(k / RAMP);
+  if (k > 1 - RAMP) return 1 - ramp((1 - k) / RAMP);
+  return ramp(1) + VMAX * (k - RAMP);
+};
+
 function updateFlight(now) {
   if (!flight) return;
   const f = flight, dt = Math.min(0.05, (now - f.last) / 1000); f.last = now;
-  const k = THREE.MathUtils.clamp((now - f.start) / f.dur, 0, 1), sAt = ease(k) * f.length;
+  const k = THREE.MathUtils.clamp((now - f.start) / f.dur, 0, 1), sAt = THREE.MathUtils.clamp(cruise(k), 0, 1) * f.length;
   let i = 1; while (i < f.pts.length - 1 && f.lens[i] < sAt) i++;
   const a = f.pts[i - 1], b = f.pts[i], seg = f.lens[i] - f.lens[i - 1] || 1, u = THREE.MathUtils.clamp((sAt - f.lens[i - 1]) / seg, 0, 1);
   player.pos.lerpVectors(a, b, u); player.pos.y = EYE;
   // Mira hacia donde avanza y, al final, hacia el panel; siempre suavizado (sin giros bruscos en las esquinas).
   const remaining = f.length - sAt;
   const travel = Math.atan2(-(b.x - a.x), -(b.z - a.z));
-  const want = remaining < 2.5 || f.length < 1.5 ? f.wantYaw : travel;
-  const r = Math.min(1, dt * (remaining < 2.5 ? 7 : 5));
+  const arriving = remaining < 3.5 || f.length < 1.5;
+  const want = arriving ? f.wantYaw : travel;
+  const r = Math.min(1, dt * (arriving ? 6 : 4));
   player.yaw += angleDiff(want, player.yaw) * r;
-  player.pitch += ((remaining < 2.5 ? f.wantPitch : 0.04) - player.pitch) * r;
+  player.pitch += ((arriving ? f.wantPitch : 0.04) - player.pitch) * r;
   player.lift += (0 - player.lift) * r;
-  if (k >= 1) { player.yaw = f.wantYaw; player.pitch = f.wantPitch; flight = null; unstick(); }
+  // Al llegar, el giro termina de asentarse suave (nunca un salto en el último cuadro).
+  if (k >= 1 && Math.abs(angleDiff(f.wantYaw, player.yaw)) < 0.004 && Math.abs(f.wantPitch - player.pitch) < 0.004) {
+    player.yaw = f.wantYaw; player.pitch = f.wantPitch; flight = null; unstick();
+  }
 }
 
 // ---------------------------------------------------------------- Tweens
@@ -733,8 +764,8 @@ function enterHouse(targetRoom) {
   const p0 = camera.position.clone(), l0 = orbit.target.clone();
   const mx = ext.mouthX, p1 = new V3(mx, 1.0, ext.DEPTH + 8), l1 = new V3(mx, 0.75, 0), p2 = new V3(mx, 0.65, ext.DEPTH * 0.45);
   const look = new V3();
-  tween(1500, (k) => { const e = ease(k); camera.position.lerpVectors(p0, p1, e); camera.lookAt(look.lerpVectors(l0, l1, e)); }, () =>
-    tween(1300, (k) => { camera.position.lerpVectors(p1, p2, k * k); camera.lookAt(l1); fade.style.opacity = Math.max(0, (k - 0.4) / 0.6); }, () => {
+  tween(1100, (k) => { const e = ease(k); camera.position.lerpVectors(p0, p1, e); camera.lookAt(look.lerpVectors(l0, l1, e)); }, () =>
+    tween(1000, (k) => { camera.position.lerpVectors(p1, p2, k * k); camera.lookAt(l1); fade.style.opacity = Math.max(0, (k - 0.4) / 0.6); }, () => {
       setScene(int.scene);
       player.pos.set(doorX(0), EYE, -1.6); player.yaw = 0; player.pitch = 0;
       applyPlayerCamera();
@@ -945,11 +976,15 @@ document.addEventListener('pointerdown', (e) => {
   startDrag(e, true);
 }, true);
 addEventListener('pointermove', (e) => {
+  if (!drag && mode === 'exterior' && e.pointerType === 'mouse' && e.target === canvas) {
+    ndc.set((e.clientX / innerWidth) * 2 - 1, -(e.clientY / innerHeight) * 2 + 1); raycaster.setFromCamera(ndc, camera);
+    canvas.classList.toggle('over-door', nearHouseDoor(e.clientX, e.clientY));
+  }
   if (!drag || e.pointerId !== drag.id || pinch) return;
   const now = performance.now();
   const dx = e.clientX - drag.x, dy = e.clientY - drag.y, dt = Math.max(1, now - drag.t) / 1000;
   drag.x = e.clientX; drag.y = e.clientY; drag.t = now;
-  if (!drag.moved && Math.hypot(e.clientX - drag.sx, e.clientY - drag.sy) > 6) { drag.moved = true; canvas.classList.add('dragging'); if (mode === 'interior') hideTip(); }
+  if (!drag.moved && Math.hypot(e.clientX - drag.sx, e.clientY - drag.sy) > (e.pointerType === 'mouse' ? 6 : 12)) { drag.moved = true; canvas.classList.add('dragging'); if (mode === 'interior') hideTip(); }
   if (!drag.moved) return;
   if (mode === 'exterior') {
     orbit.az -= dx * 0.006; orbit.el = THREE.MathUtils.clamp(orbit.el + dy * 0.004, -0.05, 1.0);
@@ -982,11 +1017,28 @@ function updateInertia(dt) {
   if (Math.abs(yawVel) < 0.02) yawVel = 0;
 }
 
+// Puerta de la casa (exterior): responde en el vano, el marco y un margen alrededor, medido en pantalla
+// para que sea fácil de acertar desde cualquier distancia, con mouse o con el dedo.
+const doorPx = ext.doorTri.map(() => new THREE.Vector2());
+function nearHouseDoor(x, y) {
+  if (raycaster.intersectObjects(ext.doorParts, false).length) return true;
+  if (camera.position.z < ext.DEPTH * 0.6) return false; // la puerta está en la fachada: desde atrás no se ve
+  const v = new V3();
+  ext.doorTri.forEach((p, i) => { v.copy(p).project(camera); doorPx[i].set((v.x + 1) / 2 * innerWidth, (1 - v.y) / 2 * innerHeight); });
+  const [a, b, c] = doorPx, q = new THREE.Vector2(x, y);
+  const cross = (p1, p2) => (p2.x - p1.x) * (q.y - p1.y) - (p2.y - p1.y) * (q.x - p1.x);
+  const s1 = cross(a, b), s2 = cross(b, c), s3 = cross(c, a);
+  if ((s1 >= 0 && s2 >= 0 && s3 >= 0) || (s1 <= 0 && s2 <= 0 && s3 <= 0)) return true;
+  const segD = (p1, p2) => { const d = p2.clone().sub(p1), t = THREE.MathUtils.clamp(q.clone().sub(p1).dot(d) / d.lengthSq(), 0, 1); return q.distanceTo(p1.clone().addScaledVector(d, t)); };
+  const h = Math.abs(b.y - (a.y + c.y) / 2);
+  return Math.min(segD(a, b), segD(b, c), segD(c, a)) <= Math.max(isTouch ? 46 : 34, h * 0.3);
+}
+
 function handleClick(e) {
   ndc.set((e.clientX / innerWidth) * 2 - 1, -(e.clientY / innerHeight) * 2 + 1);
   raycaster.setFromCamera(ndc, camera);
   if (mode === 'exterior') {
-    if (raycaster.intersectObjects(ext.doorParts, false).length) enterHouse();
+    if (nearHouseDoor(e.clientX, e.clientY)) enterHouse();
     return;
   }
   if (mode !== 'interior') return;
@@ -1133,13 +1185,19 @@ function updatePanels(dt) {
     const dist = rel.length(), front = rel.dot(p.normal);
     const near = p.shown ? dist < 19 && front > 0.2 : dist < 16 && front > 0.5; // histéresis: no titila en el borde
     p.shown = p.room === player.room && near;
-    const want = p.shown ? (floatOpen && p.room === 2 ? 0.14 : 1) : 0;
+    // En un recorrido solo se ve el holograma de destino: los de las salas por las que se pasa quedarían
+    // de canto al pasarlos (muy costoso de pintar) y solo distraen. Sus marcos de neón siguen visibles.
+    const passing = flight && p.room !== atPanel;
+    const want = p.shown && !passing ? (floatOpen && p.room === 2 ? 0.14 : 1) : 0;
     p.opacity += (want - p.opacity) * Math.min(1, dt * 6);
     if (Math.abs(want - p.opacity) < 0.004) p.opacity = want;
+    // De canto o por detrás se oculta al instante: en ese ángulo el navegador tendría que pintar un área
+    // enorme (eso daba tirones al pasar junto a un panel) y de todos modos se ve como una línea.
+    if (front < 0.4 || front / dist < 0.3) p.opacity = 0;
     const o = Math.round(p.opacity * 100) / 100;
     if (o !== p.lastO) { p.lastO = o; p.wrap.style.opacity = o; }
-    const vis = o > 0.01;
-    if (p.css.visible !== vis) p.css.visible = vis;
+    const vis = o > 0.01 ? 'visible' : 'hidden'; // oculto sin sacarlo del DOM: aparece sin tirón
+    if (vis !== p.vis) { p.vis = vis; p.wrap.style.visibility = vis; }
     const pe = o > 0.6 ? 'auto' : 'none';
     if (pe !== p.pe) { p.pe = pe; p.wrap.style.pointerEvents = pe; }
     p.slab.material.opacity = 0.18 + 0.3 * (1 - p.opacity);
@@ -1159,6 +1217,31 @@ function updateRoomHUD() {
 }
 
 // ---------------------------------------------------------------- Bucle
+// Prepara el interior mientras se ve la pantalla de carga: compila los materiales y dibuja una vez
+// cada sala, y decodifica las imágenes de los hologramas. Así la primera visita a cada sala no da tirones.
+function warmUp() {
+  const pos = camera.position.clone(), quat = camera.quaternion.clone(), fov = camera.fov;
+  const restore = [];
+  try {
+    // Todo visible y sin recorte por cámara, solo durante esta preparación.
+    int.scene.traverse((o) => {
+      restore.push([o, o.visible, o.frustumCulled]); o.visible = true; o.frustumCulled = false;
+      for (const m of [].concat(o.material || [])) for (const v of Object.values(m)) if (v && v.isTexture) renderer.initTexture(v);
+    });
+    renderer.compile(int.scene, camera);
+    renderPass.scene = int.scene;
+    camera.fov = fovFor(true); camera.updateProjectionMatrix();
+    for (let i = 0; i < ROOMS.length; i++) {
+      camera.position.set(0, EYE, -i * D - 3); camera.lookAt(0, EYE, -i * D - D);
+      composer.render();
+    }
+  } catch { /* si falla, solo se pierde la preparación */ }
+  for (const [o, v, f] of restore) { o.visible = v; o.frustumCulled = f; }
+  renderPass.scene = scene;
+  camera.position.copy(pos); camera.quaternion.copy(quat); camera.fov = fov; camera.updateProjectionMatrix();
+  document.querySelectorAll('#css-layer img').forEach((img) => img.decode?.().catch(() => {}));
+}
+
 let last = performance.now(), booted = false;
 function frame(now) {
   requestAnimationFrame(frame);
@@ -1181,7 +1264,7 @@ function frame(now) {
   }
   composer.render();
   if (scene === int.scene) cssRenderer.render(int.scene, camera);
-  if (!booted) { booted = true; setTimeout(() => $('#loading').classList.add('off'), 350); }
+  if (!booted) { booted = true; warmUp(); setTimeout(() => $('#loading').classList.add('off'), 350); }
 }
 requestAnimationFrame(frame);
 
@@ -1205,7 +1288,7 @@ if (start >= 0) {
 }
 
 // Acceso para pruebas y depuración.
-window.casaCuco = { goTo, enterHouse, exitHouse, player, get mode() { return mode; }, get flying() { return !!flight; }, planPath, walkable, panelFit, panels: int.panels, flyToRoom, zoomBy, get zoomDist() { return zoomDist; },
+window.casaCuco = { goTo, enterHouse, exitHouse, player, roundCorners, get mode() { return mode; }, get flying() { return !!flight; }, planPath, walkable, panelFit, panels: int.panels, flyToRoom, zoomBy, get zoomDist() { return zoomDist; },
   // Prueba interna: qué toca un clic dirigido a un punto del mundo (pared, puerta, panel o piso).
   probe(x, y, z) {
     const o = camera.position.clone(); raycaster.set(o, new V3(x, y, z).sub(o).normalize());
