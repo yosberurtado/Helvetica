@@ -330,18 +330,17 @@ function buildInterior() {
     const zoneGeo = new THREE.ShapeGeometry(new THREE.Shape(doorPoly(dx, 1.05).map(([x, y]) => new THREE.Vector2(x, Math.max(y, 0)))));
     const zoneMat = new THREE.MeshBasicMaterial({ transparent: true, opacity: 0, depthWrite: false, side: THREE.DoubleSide });
     for (const zf of [zw + 0.74, zw - 0.74]) { const zone = new THREE.Mesh(zoneGeo, zoneMat); zone.position.z = zf; doorPart(zone, k); }
-    const sealed = k === NWALL - 1, exit = k === 0;
-    if (sealed || exit) {
-      // Portal de luz: salida al exterior (k=0) o luz de fondo de la última sala.
+    const front = k === 0, back = k === NWALL - 1;
+    if (front || back) {
+      // Portal de luz: salida al exterior por la entrada (k=0) o por el fondo de la última sala.
       const portalShape = new THREE.Shape(P.map(([x, y]) => new THREE.Vector2(x, y)));
       const portal = new THREE.Mesh(new THREE.ShapeGeometry(portalShape), new THREE.MeshBasicMaterial({
-        color: exit ? 0xb8d60a : 0xf6fe98, map: beamTex, transparent: true, opacity: exit ? 0.55 : 0.95, side: THREE.DoubleSide, fog: false,
+        color: 0xb8d60a, map: beamTex, transparent: true, opacity: 0.55, side: THREE.DoubleSide, fog: false,
       }));
-      portal.position.z = zw + (exit ? 0.35 : 0.1);
-      if (!exit) portal.material.blending = THREE.AdditiveBlending;
+      portal.position.z = zw + (front ? 0.35 : -0.35);
       scene.add(portal);
     }
-    const l = new THREE.PointLight(0xe8ff70, sealed ? 30 : 16, 14, 2); l.position.set(dx, 2.4, zw + (exit ? -1 : 0)); scene.add(l);
+    const l = new THREE.PointLight(0xe8ff70, back ? 30 : 16, 14, 2); l.position.set(dx, 2.4, zw + (front ? -1 : back ? 1 : 0)); scene.add(l);
     doors.push({ k, zw, dx, light: l });
   }
 
@@ -491,6 +490,7 @@ function buildInterior() {
   const rects = ROOMS.map((_, i) => ({ x0: -half + 0.9, x1: half - 0.9, z0: -(i + 1) * D + 0.95, z1: -i * D - 0.95 }));
   for (let k = 1; k < NWALL - 1; k++) rects.push({ x0: doorX(k) - 0.85, x1: doorX(k) + 0.85, z0: -k * D - 1.3, z1: -k * D + 1.3 });
   rects.push({ x0: doorX(0) - 0.85, x1: doorX(0) + 0.85, z0: -1.3, z1: 0.9 });
+  rects.push({ x0: doorX(NWALL - 1) - 0.85, x1: doorX(NWALL - 1) + 0.85, z0: zEnd - 0.9, z1: zEnd + 1.3 });
 
   // Marcador para "clic en el piso".
   const marker = new THREE.Mesh(new THREE.RingGeometry(0.28, 0.4, 40), new THREE.MeshBasicMaterial({ color: ACID, transparent: true, opacity: 0, depthWrite: false }));
@@ -639,7 +639,7 @@ function updateWalk(dt) {
     }
   }
   player.lift += ((zoomDist == null ? 0 : player.liftWant || 0) - player.lift) * Math.min(1, dt * 6);
-  if (player.pos.z > 0.35) { exitHouse(); return; }
+  if (player.pos.z > 0.35 || player.pos.z < -(NWALL - 1) * D - 0.35) { exitHouse(); return; }
 }
 
 function applyPlayerCamera() {
@@ -1001,7 +1001,7 @@ function handleClick(e) {
   const r = roomAt(hit.point.z);
   if (r !== player.room) { flyToRoom(r); return; } // piso de otra sala visto por la puerta
   // Piso justo frente a una puerta (umbral de luz incluido): también cuenta como la puerta.
-  for (let k = 0; k < NWALL - 1; k++) {
+  for (let k = 0; k < NWALL; k++) {
     if (Math.abs(hit.point.x - doorX(k)) < DOOR_W + 0.5 && Math.abs(hit.point.z + k * D) < 2.2) { goThroughDoor(k); return; }
   }
   if (flight) { flight = null; }
@@ -1011,10 +1011,10 @@ function handleClick(e) {
   int.marker.position.set(hit.point.x, 0.03, hit.point.z);
   int.marker.material.opacity = 1; int.marker.scale.setScalar(1);
 }
-// Puerta k une la sala k-1 con la sala k (la puerta 0 es la salida; la última está cerrada).
+// Puerta k une la sala k-1 con la sala k (la primera y la última llevan al exterior).
 function goThroughDoor(k) {
   if (k === 0) { if (player.room === 0) exitHouse(); return; }
-  if (k >= NWALL - 1) return;
+  if (k >= NWALL - 1) { if (player.room === ROOMS.length - 1) exitHouse(); return; }
   const target = player.pos.z > -k * D ? k : k - 1;
   flyToRoom(target);
 }
