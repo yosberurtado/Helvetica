@@ -723,6 +723,7 @@ function setScene(s) {
   camera.near = inside ? 0.05 : 0.1; camera.fov = fovFor(inside); camera.updateProjectionMatrix();
   cssRenderer.domElement.style.display = inside ? '' : 'none';
   $('#extUI').hidden = inside; $('#intUI').hidden = !inside;
+  document.body.classList.toggle('is-inside', inside); // el menú de secciones solo se muestra dentro de la casa
 }
 setScene(ext.scene);
 
@@ -745,7 +746,7 @@ function enterHouse(targetRoom) {
 }
 function exitHouse() {
   if (mode !== 'interior') return;
-  mode = 'transition'; flight = null; walkPath = []; atPanel = null; keys.clear();
+  mode = 'transition'; flight = null; walkPath = []; atPanel = null; keys.clear(); closeMenu();
   tween(550, (k) => (fade.style.opacity = k), () => {
     setScene(ext.scene);
     const p1 = new V3(ext.mouthX, 1.2, ext.DEPTH + 7), l1 = new V3(ext.mouthX, 1, 0);

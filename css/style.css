@@ -47,6 +47,9 @@ img{max-width:100%}
 .icon-btn svg{width:18px;height:18px}
 .icon-btn:hover{background:var(--acid);color:var(--ink)}
 .menu-btn{display:none;border:1px solid #daff0266;background:#070707d9;color:var(--acid);padding:11px 16px;border-radius:30px;font:600 11px var(--ui);letter-spacing:.12em;text-transform:uppercase;cursor:pointer}
+/* Menú de secciones: solo dentro de la casa; afuera queda la portada limpia. */
+.nav,.menu-btn{transition:opacity .45s,visibility .45s}
+body:not(.is-inside) .nav,body:not(.is-inside) .menu-btn{opacity:0;visibility:hidden;pointer-events:none}
 
 /* ---------- Botones ---------- */
 .btn-solid,.btn-ghost{border-radius:40px;padding:13px 20px;font:600 11px var(--ui);letter-spacing:.14em;text-transform:uppercase;cursor:pointer;transition:transform .15s,background .2s,color .2s,box-shadow .2s}
