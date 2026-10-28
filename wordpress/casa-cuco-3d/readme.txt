@@ -3,7 +3,7 @@ Contributors: grupokeipoint
 Requires at least: 6.0
 Tested up to: 6.8
 Requires PHP: 7.4
-Stable tag: 1.0.0
+Stable tag: 2.0.0
 License: GPLv2 or later
 
 Experiencia 3D de Casa Cuco: el exterior de la casa y cinco salas (Inicio, Nosotros, Proyectos, Servicios y Contacto) con cada sección del sitio proyectada como holograma.
@@ -26,6 +26,13 @@ Para volver al sitio anterior basta con devolver la portada a la página que ten
 * Tipografía Troika: copia troika.ttf en la carpeta assets/fonts/ del plugin y agrega su url() en el @font-face al inicio de css/style.css.
 
 == Changelog ==
+
+= 2.0.0 =
+* Textos de la versión 2.0 revisada e imágenes nuevas de proyectos.
+* Proyectos como holograma flotante con carrusel de imágenes; salas con fondo oscuro y claro alternado.
+* Navegación interior sin trabas: recorridos por el centro de las puertas, toda la puerta clicable, acercamiento hasta el panel y la última puerta sale al exterior.
+* Formulario: campo Empresa u organización incluido en el correo y mensajes de la versión 2.0.
+* Título y descripción para buscadores actualizados.
 
 = 1.0.0 =
 * Primera versión.

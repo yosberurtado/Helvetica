@@ -2,7 +2,7 @@
 /**
  * Plugin Name:       Casa Cuco 3D
  * Description:       Experiencia 3D de Casa Cuco: exterior de la casa y cinco salas con las secciones del sitio como hologramas. Agrega la plantilla de página «Casa Cuco 3D – pantalla completa» y envía el formulario de contacto por correo desde WordPress.
- * Version:           1.0.0
+ * Version:           2.0.0
  * Requires at least: 6.0
  * Requires PHP:      7.4
  * Author:            Grupo Keipoint
@@ -13,7 +13,7 @@
 
 defined( 'ABSPATH' ) || exit;
 
-define( 'CCU3D_VERSION', '1.0.0' );
+define( 'CCU3D_VERSION', '2.0.0' );
 define( 'CCU3D_FILE', __FILE__ );
 define( 'CCU3D_DIR', plugin_dir_path( __FILE__ ) );
 define( 'CCU3D_URL', plugin_dir_url( __FILE__ ) );
@@ -94,6 +94,14 @@ add_filter( 'litespeed_optimize_js_excludes', function ( $excludes ) {
 	return $excludes;
 } );
 
+// Título del documento (si un plugin SEO está activo, manda el título configurado en él).
+function ccu3d_has_seo_plugin() {
+	return defined( 'WPSEO_VERSION' ) || class_exists( 'RankMath' ) || defined( 'AIOSEO_VERSION' ) || defined( 'SEOPRESS_VERSION' );
+}
+add_filter( 'pre_get_document_title', function ( $title ) {
+	return ccu3d_is_active() && ! ccu3d_has_seo_plugin() ? 'Casa Cuco | Estudio de desarrollo creativo en Chile' : $title;
+}, 20 );
+
 /* -------------------------------------------------------------------------
  * Formulario de contacto (REST)
  * ---------------------------------------------------------------------- */
@@ -124,34 +132,39 @@ function ccu3d_handle_contact( WP_REST_Request $request ) {
 	}
 
 	$name    = isset( $params['name'] ) ? sanitize_text_field( $params['name'] ) : '';
-	$email   = isset( $params['email'] ) ? sanitize_email( $params['email'] ) : '';
+	$raw     = isset( $params['email'] ) ? trim( (string) $params['email'] ) : '';
+	$email   = sanitize_email( $raw );
+	$company = isset( $params['company'] ) ? sanitize_text_field( $params['company'] ) : '';
 	$message = isset( $params['message'] ) ? sanitize_textarea_field( $params['message'] ) : '';
 
-	if ( '' === $name || '' === $message || ! is_email( $email ) ) {
-		return new WP_Error( 'ccu3d_invalid', 'Completa tu nombre, un correo válido y tu mensaje.', array( 'status' => 400 ) );
+	if ( '' === $name || '' === $message || '' === $raw ) {
+		return new WP_Error( 'ccu3d_invalid', 'Completa los campos obligatorios para continuar.', array( 'status' => 400 ) );
 	}
-	if ( mb_strlen( $name ) > 120 || mb_strlen( $message ) > 5000 ) {
-		return new WP_Error( 'ccu3d_too_long', 'El mensaje es demasiado largo. Acórtalo e inténtalo de nuevo.', array( 'status' => 400 ) );
+	if ( ! is_email( $email ) ) {
+		return new WP_Error( 'ccu3d_email', 'Ingresa un correo electrónico válido.', array( 'status' => 400 ) );
+	}
+	if ( mb_strlen( $name ) > 120 || mb_strlen( $company ) > 160 || mb_strlen( $message ) > 5000 ) {
+		return new WP_Error( 'ccu3d_too_long', 'Tu mensaje es demasiado largo. Acórtalo e inténtalo nuevamente.', array( 'status' => 400 ) );
 	}
 
 	// Máximo 5 mensajes cada 10 minutos por IP.
 	$key   = 'ccu3d_rl_' . md5( ccu3d_client_ip() );
 	$count = (int) get_transient( $key );
 	if ( $count >= 5 ) {
-		return new WP_Error( 'ccu3d_rate', 'Recibimos varios mensajes seguidos. Espera unos minutos e inténtalo de nuevo.', array( 'status' => 429 ) );
+		return new WP_Error( 'ccu3d_rate', 'Recibimos varios mensajes seguidos. Espera unos minutos e inténtalo nuevamente.', array( 'status' => 429 ) );
 	}
 	set_transient( $key, $count + 1, 10 * MINUTE_IN_SECONDS );
 
 	$to      = get_option( 'ccu3d_email', CCU3D_DEFAULT_EMAIL );
 	$subject = sprintf( 'Nuevo mensaje desde Casa Cuco · %s', $name );
-	$body    = "Nombre: {$name}\nCorreo: {$email}\n\n{$message}\n\n—\nEnviado desde " . home_url( '/' );
+	$body    = "Nombre: {$name}\nCorreo: {$email}\nEmpresa u organización: " . ( '' !== $company ? $company : '—' ) . "\n\n{$message}\n\n—\nEnviado desde " . home_url( '/' );
 	$headers = array(
 		'Content-Type: text/plain; charset=UTF-8',
 		sprintf( 'Reply-To: %s <%s>', str_replace( array( '<', '>', '"' ), '', $name ), $email ),
 	);
 
 	if ( ! wp_mail( $to, $subject, $body, $headers ) ) {
-		return new WP_Error( 'ccu3d_mail', 'No pudimos enviar el mensaje. Escríbenos a ' . $to . '.', array( 'status' => 500 ) );
+		return new WP_Error( 'ccu3d_mail', 'No pudimos enviar tu mensaje. Inténtalo nuevamente o escríbenos a ' . CCU3D_DEFAULT_EMAIL . '.', array( 'status' => 500 ) );
 	}
 	return new WP_REST_Response( array( 'ok' => true ), 200 );
 }

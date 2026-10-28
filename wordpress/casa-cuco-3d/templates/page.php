@@ -8,7 +8,10 @@ defined( 'ABSPATH' ) || exit;
 $ccu3d_body = file_get_contents( CCU3D_DIR . 'templates/body.html' ); // generado desde index.html al construir el plugin
 $ccu3d_body = str_replace( array( 'src="assets/', 'href="assets/' ), array( 'src="' . esc_url( CCU3D_URL ) . 'assets/', 'href="' . esc_url( CCU3D_URL ) . 'assets/' ), $ccu3d_body );
 
-$ccu3d_has_seo = defined( 'WPSEO_VERSION' ) || class_exists( 'RankMath' ) || defined( 'AIOSEO_VERSION' ) || defined( 'SEOPRESS_VERSION' );
+$ccu3d_has_seo = ccu3d_has_seo_plugin();
+
+// Si el tema no imprime <title> (temas clásicos antiguos), lo imprime la plantilla; así nunca sale duplicado.
+$ccu3d_print_title = ! current_theme_supports( 'title-tag' ) && ! has_action( 'wp_head', '_block_template_render_title_tag' );
 ?><!doctype html>
 <html <?php language_attributes(); ?>>
 <head>
@@ -16,7 +19,10 @@ $ccu3d_has_seo = defined( 'WPSEO_VERSION' ) || class_exists( 'RankMath' ) || def
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#070707">
 <?php if ( ! $ccu3d_has_seo ) : ?>
-<meta name="description" content="Casa Cuco. Creamos soluciones integrales para ideas y desafíos únicos.">
+<meta name="description" content="Creamos historias, personajes y universos narrativos para marcas e instituciones. Desarrollo creativo, storytelling y creatividad sin miedo.">
+<?php endif; ?>
+<?php if ( $ccu3d_print_title ) : ?>
+<title><?php echo esc_html( wp_get_document_title() ); ?></title>
 <?php endif; ?>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -29,8 +35,8 @@ $ccu3d_has_seo = defined( 'WPSEO_VERSION' ) || class_exists( 'RankMath' ) || def
 <noscript>
 	<div style="position:fixed;inset:0;z-index:40;display:grid;place-content:center;gap:12px;padding:24px;background:#070707;color:#fff;font:16px/1.5 Inter,Arial,sans-serif;text-align:center">
 		<p><strong>Casa Cuco</strong></p>
-		<p>Creamos soluciones integrales para ideas y desafíos únicos.</p>
-		<p>Esta experiencia 3D necesita JavaScript. Escríbenos a contacto@grupokeipoint.com</p>
+		<p>Estudio de desarrollo creativo</p>
+		<p>Esta experiencia interactiva necesita un navegador compatible con contenido 3D. Puedes escribirnos a <a href="mailto:contacto@grupokeipoint.com" style="color:#daff02">contacto@grupokeipoint.com</a>.</p>
 	</div>
 </noscript>
 <script id="casa-cuco-3d-config">window.CASA_CUCO = <?php echo wp_json_encode( array( 'contactUrl' => esc_url_raw( rest_url( 'casa-cuco/v1/contacto' ) ) ) ); ?>;</script>
