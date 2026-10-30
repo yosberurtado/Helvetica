@@ -443,7 +443,8 @@ function buildInterior() {
     const pp = panels[float.room];
     float.portrait = portrait;
     fg.rotation.y = pp.group.rotation.y; float.normal.copy(pp.normal); float.along.copy(pp.along);
-    const [pxW, pxH, s] = portrait ? [760, 1560, 0.0031] : [880, 1240, 0.0034]; // alta: el texto de la ficha se lee completo
+    // Horizontal: ancha, en dos columnas (imágenes | texto) para que el texto se lea grande. Vertical: una columna.
+    const [pxW, pxH, s] = portrait ? [760, 1400, 0.0031] : [1440, 900, 0.0042];
     const w = pxW * s, h = pxH * s, cy = (portrait ? 0.5 : 0.55) + h / 2;
     float.w = w; float.h = h;
     float.center.copy(pp.center).addScaledVector(pp.normal, 2.2); float.center.y = cy;

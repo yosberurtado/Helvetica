@@ -296,8 +296,8 @@ body:not(.is-inside) .menu-btn{opacity:0;visibility:hidden;pointer-events:none}
 .light .about-art{border-color:#07070740}
 
 /* ---------- Ficha de proyecto flotante (holograma) ---------- */
-.holo-wrap.float{width:880px;height:1240px}
-.holo-wrap.float.portrait{width:760px;height:1560px}
+.holo-wrap.float{width:1440px;height:900px}
+.holo-wrap.float.portrait{width:760px;height:1400px}
 .float-holo{background:linear-gradient(180deg,#0d1305d1,#050703e6 60%,#0a0f04d1);border:2px solid #daff02cc;border-radius:4px;box-shadow:0 0 0 1px #f6fe9844 inset,0 0 24px #daff0266}
 .float-holo::before{background:repeating-linear-gradient(180deg,#daff020f 0 1px,transparent 1px 4px),linear-gradient(115deg,#ffffff12,transparent 35%)}
 .float-in{position:relative;z-index:1;height:100%;overflow-y:auto;overscroll-behavior:contain;touch-action:pan-y;padding:30px 36px 34px;display:flex;flex-direction:column;gap:16px;cursor:pointer;scrollbar-width:thin;scrollbar-color:var(--acid) transparent}
@@ -317,14 +317,14 @@ body:not(.is-inside) .menu-btn{opacity:0;visibility:hidden;pointer-events:none}
 .car-dot.on{background:var(--acid);box-shadow:0 0 10px var(--acid)}
 .float .detail-copy{gap:10px}
 .carousel.single .car-btn,.carousel.single .car-dots{display:none}
-.float .detail-copy .display.small{font-size:38px}
-.float .detail-copy p{font-size:16px;max-width:none}
-.float .detail-copy .detail-sub{font-size:20px}
+.float .detail-copy .display.small{font-size:50px}
+.float .detail-copy p{font-size:21px;line-height:1.55;max-width:none}
+.float .detail-copy .detail-sub{font-size:26px}
 .portrait.float .float-in{padding:34px 36px 40px;gap:22px}
-.portrait.float .detail-copy .display.small{font-size:50px}
-.portrait.float .detail-copy p{font-size:24px}
-.portrait.float .detail-copy .detail-sub{font-size:30px}
-.portrait.float .cats{font-size:18px}
+.portrait.float .detail-copy .display.small{font-size:54px}
+.portrait.float .detail-copy p{font-size:27px;line-height:1.5}
+.portrait.float .detail-copy .detail-sub{font-size:32px}
+.portrait.float .cats{font-size:19px}
 .portrait.float .float-x{width:56px;height:56px;font-size:36px}
 .portrait.float .car-btn{width:60px;height:60px;margin-top:-30px;font-size:38px}
 /* Aparición y salida tipo holograma: se materializa desde una línea, titila y se estabiliza */
@@ -403,3 +403,13 @@ body:not(.is-inside) .menu-btn{opacity:0;visibility:hidden;pointer-events:none}
 .portrait .service p{font-size:20px;line-height:1.34}
 [data-room="servicios"].portrait .intro{font-size:22px}
 .light .about-copy .slash{color:var(--acid)} /* la etiqueta conserva su color sobre el fondo negro */
+
+/* Ficha en pantalla horizontal: dos columnas, imágenes a la izquierda y texto grande a la derecha. */
+.float:not(.portrait):not(.is-manifesto) .float-in{display:grid;grid-template-columns:600px 1fr;grid-template-rows:100%;column-gap:44px;align-items:center;padding:40px 52px}
+.float:not(.portrait):not(.is-manifesto) .detail-copy{max-height:100%;overflow-y:auto;padding-right:8px;scrollbar-width:thin;scrollbar-color:var(--acid) transparent}
+.float:not(.portrait) .cats{font-size:14px}
+.float.is-manifesto:not(.portrait) .manifesto-copy{max-width:1060px;margin:auto}
+.float.is-manifesto:not(.portrait) .manifesto-copy p{font-size:22px}
+.float.is-manifesto:not(.portrait) .manifesto-copy .manifesto-q{font-size:27px}
+.float.is-manifesto:not(.portrait) .manifesto-copy .manifesto-end{font-size:32px}
+.float.is-manifesto:not(.portrait) .manifesto-title{font-size:70px}
