@@ -416,3 +416,12 @@ body:not(.is-inside) .menu-btn{opacity:0;visibility:hidden;pointer-events:none}
 .float.is-manifesto:not(.portrait) .manifesto-title{font-size:calc(var(--fz,1)*70px)}
 /* El espacio que sobre se reparte arriba y abajo (si algo no cabe, empieza arriba y nunca se corta). */
 .holo-in,.float-in{justify-content:safe center}
+
+/* Celular: botones para el dedo (~44 px en pantalla). Tamaño fijo, no crece con el texto. */
+.portrait.float .float-x{top:20px;right:20px;width:124px;height:124px;border-width:3px;font-size:74px;line-height:1}
+.portrait.float .car-btn{width:116px;height:116px;margin-top:-58px;border-width:3px;font-size:72px}
+.portrait.float .car-btn.prev{left:18px}.portrait.float .car-btn.next{right:18px}
+.portrait.float .car-dot{width:44px;height:8px}
+.portrait .pcar-btn{width:108px;height:108px;border-width:3px;font-size:66px;padding:0 0 6px}
+.portrait .pcar-btn.prev{left:-30px}.portrait .pcar-btn.next{right:-30px}
+.portrait .pcar-dot{width:52px;height:10px}
