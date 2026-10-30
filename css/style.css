@@ -137,7 +137,7 @@ body:not(.is-inside) .menu-btn{opacity:0;visibility:hidden;pointer-events:none}
 
 /* Nosotros */
 .about-block{display:flex;flex-direction:column;gap:6px}
-.about-grid{display:grid;grid-template-columns:420px 1fr;gap:52px;align-items:center}
+.about-grid{display:grid;grid-template-columns:420px 1fr;gap:52px;align-items:center;margin:auto 0} /* centrado vertical en el panel */
 .about-art{margin:0;aspect-ratio:1;max-width:100%;display:grid;place-items:center;background:var(--ink);border:1px solid #daff0255}
 .about-art svg{width:78%;height:78%;color:var(--bone)}
 .about-art.team{border:0;background:none;aspect-ratio:1} /* imagen con fondo transparente sobre el panel */
@@ -145,25 +145,36 @@ body:not(.is-inside) .menu-btn{opacity:0;visibility:hidden;pointer-events:none}
 .shout{font-size:74px;line-height:.92;letter-spacing:-.01em}
 .shout span{display:inline-block;margin-top:10px;padding:6px 16px 10px;background:var(--ink);color:var(--acid);transform:rotate(-2.5deg);box-shadow:8px 8px 0 var(--acid)}
 .about-copy .about-lead{font:600 27px/1.3 var(--serif);max-width:24ch}
-.about-copy .btn-bar{align-self:flex-start;margin-top:6px}
+.about-copy{align-items:center;text-align:center}
+.about-copy .about-lead{margin-left:auto;margin-right:auto}
+.about-copy .btn-bar{align-self:center;margin-top:6px}
 .about-copy{display:flex;flex-direction:column;gap:14px;min-width:0}
 .about-copy p{margin:0;font-size:17px;line-height:1.45;max-width:58ch}
 .btn-bar{align-self:flex-start;margin-top:12px;padding:15px 26px;background:var(--acid);color:var(--ink);font:20px var(--display);text-transform:uppercase}
 .btn-bar:hover{box-shadow:0 0 30px #daff02aa}
 
 /* Proyectos */
-.projects{display:grid;grid-template-columns:1fr 1fr;gap:14px 18px}
+/* Carrusel de proyectos: 4 tarjetas a la vista (2 en el celular), flechas y puntos. */
+.pcar{position:relative;--gap:20px;--vis:4}
+.pcar-view{overflow:hidden;margin:0 -4px;padding:6px 4px 8px}
+.projects{display:flex;gap:var(--gap);transition:transform .6s cubic-bezier(.3,.7,.2,1);will-change:transform}
+.projects>.project{flex:0 0 calc((100% - (var(--vis) - 1) * var(--gap)) / var(--vis))}
+.pcar-btn{position:absolute;top:34%;z-index:2;width:46px;height:46px;border-radius:50%;border:1px solid var(--acid);background:#070707e0;color:var(--acid);font:30px/1 var(--ui);cursor:pointer;display:grid;place-items:center;padding:0 0 4px}
+.pcar-btn:hover{background:var(--acid);color:var(--ink)}
+.pcar-btn.prev{left:-22px}.pcar-btn.next{right:-22px}
+.pcar-dots{display:flex;justify-content:center;gap:8px;margin-top:6px}
+.pcar-dot{width:26px;height:5px;border:0;border-radius:3px;background:#f4f4ea44;cursor:pointer;padding:0}
+.pcar-dot.on{background:var(--acid)}
 
 /* Proyectos: tarjetas y páginas internas */
 .projects-list{display:flex;flex-direction:column;gap:14px}
-/* Tarjeta horizontal (imagen 1200×1000 a la izquierda): las seis caben en el panel sin desplazarse. */
-.project{min-width:0;display:grid;grid-template-columns:150px 1fr;grid-auto-rows:min-content;align-content:start;column-gap:16px;row-gap:5px;padding:10px 12px 10px 10px;border:1px solid #daff0233;border-radius:4px;background:#151515e6;color:inherit;text-align:left;font:inherit;cursor:pointer;transition:transform .2s,border-color .2s}
+.project{min-width:0;display:flex;flex-direction:column;gap:6px;padding:10px 12px 14px;border:1px solid #daff0233;border-radius:4px;background:#151515e6;color:inherit;text-align:left;font:inherit;cursor:pointer;transition:transform .2s,border-color .2s}
 .project:hover{border-color:var(--acid)}
 .project:hover{transform:translateY(-4px)}
 .project:hover img{border-color:var(--acid)}
-.project img{grid-row:1/span 4;display:block;width:100%;height:auto;aspect-ratio:6/5;object-fit:cover;border-radius:2px}
-.project h3{margin:2px 0 0;font:20px/1.05 var(--display);text-transform:uppercase}
-.project p{margin:0;font-size:13.5px;line-height:1.38;color:#e4e4e4}
+.project img{display:block;width:100%;height:auto;aspect-ratio:6/5;object-fit:cover;border-radius:2px;margin-bottom:4px}
+.project h3{margin:6px 0 0;font:21px/1.05 var(--display);text-transform:uppercase}
+.project p{margin:0;font-size:14px;line-height:1.4;color:#e4e4e4}
 .project .cats{font-size:10px}
 .project-detail{display:flex;flex-direction:column;gap:14px}
 .back{align-self:flex-start;padding:8px 14px;border:1px solid #daff0266;border-radius:30px;background:#070707;color:var(--acid);font:600 12px var(--ui);letter-spacing:.08em;cursor:pointer}
@@ -189,9 +200,9 @@ body:not(.is-inside) .menu-btn{opacity:0;visibility:hidden;pointer-events:none}
 /* Contacto */
 .contact-grid{display:grid;grid-template-columns:1.1fr 1fr;gap:48px}
 .contact-grid>div{min-width:0}
-.contact-main p{margin:6px 0 0;font-size:17px;line-height:1.45}
-.contact-main .display{margin-top:6px}
-.contact-form{margin-top:16px;display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.contact-main p{margin:4px 0 0;font-size:16.5px;line-height:1.4}
+.contact-main .display{margin-top:2px}
+.contact-form{margin-top:12px;display:grid;grid-template-columns:1fr 1fr;gap:8px}
 .contact-form textarea,.contact-form .full,.contact-form .btn-solid,.contact-form .form-status{grid-column:1/-1}
 .contact-form input,.contact-form textarea{width:100%;padding:11px 13px;border:1px solid #daff0266;border-radius:2px;background:#ffffff;color:var(--ink);font:15px var(--ui);letter-spacing:.06em;resize:none}
 .contact-form input:focus,.contact-form textarea:focus{outline:2px solid var(--acid);outline-offset:1px}
@@ -233,10 +244,11 @@ body:not(.is-inside) .menu-btn{opacity:0;visibility:hidden;pointer-events:none}
 .portrait .about-art{max-width:600px;width:100%;justify-self:center}
 .portrait .shout{font-size:84px}
 .portrait .about-copy .about-lead{font-size:34px;max-width:none}
-.portrait .about-copy{align-items:flex-start}
+.portrait .about-copy{align-items:center}
 .portrait .services{grid-template-columns:1fr 1fr;gap:26px}
-.portrait .projects{grid-template-columns:1fr;gap:18px}
-.portrait .project{grid-template-columns:230px 1fr;column-gap:22px}
+.portrait .pcar{--vis:2;--gap:26px}
+.portrait .pcar-btn{width:64px;height:64px;font-size:40px}
+.portrait .pcar-dot{width:40px;height:8px}
 .portrait .project h3,.portrait .service h3{font-size:30px}
 .portrait .project p,.portrait .service p{font-size:24px}
 .portrait .contact-form{grid-template-columns:1fr}
@@ -283,8 +295,8 @@ body:not(.is-inside) .menu-btn{opacity:0;visibility:hidden;pointer-events:none}
 .light .about-art{border-color:#07070740}
 
 /* ---------- Ficha de proyecto flotante (holograma) ---------- */
-.holo-wrap.float{width:880px;height:1000px}
-.holo-wrap.float.portrait{width:760px;height:1240px}
+.holo-wrap.float{width:880px;height:1240px}
+.holo-wrap.float.portrait{width:760px;height:1560px}
 .float-holo{background:linear-gradient(180deg,#0d1305d1,#050703e6 60%,#0a0f04d1);border:2px solid #daff02cc;border-radius:4px;box-shadow:0 0 0 1px #f6fe9844 inset,0 0 24px #daff0266}
 .float-holo::before{background:repeating-linear-gradient(180deg,#daff020f 0 1px,transparent 1px 4px),linear-gradient(115deg,#ffffff12,transparent 35%)}
 .float-in{position:relative;z-index:1;height:100%;overflow-y:auto;overscroll-behavior:contain;touch-action:pan-y;padding:30px 36px 34px;display:flex;flex-direction:column;gap:16px;cursor:pointer;scrollbar-width:thin;scrollbar-color:var(--acid) transparent}
@@ -333,19 +345,19 @@ body:not(.is-inside) .menu-btn{opacity:0;visibility:hidden;pointer-events:none}
 #css-layer .holo input,#css-layer .holo textarea{user-select:text;-webkit-user-select:text;cursor:text}
 
 /* ---------- Manifiesto (Nosotros → Ver más) ---------- */
-.manifesto-copy{display:flex;flex-direction:column;gap:14px;padding-top:6px}
+.manifesto-copy{display:flex;flex-direction:column;align-items:center;gap:14px;padding-top:6px;text-align:center;margin:auto 0} /* centrado también en alto dentro de la ventana */
 .manifesto-copy p{margin:0;font-size:19px;line-height:1.55;color:#ecece4}
 .manifesto-title{margin:0 0 6px;font-size:64px;line-height:.92;color:var(--bone)}
 .manifesto-title span{display:inline-block;margin-top:6px;padding:4px 14px 8px;background:var(--acid);color:var(--ink);transform:rotate(-2deg)}
 .manifesto-copy .manifesto-q{font:italic 600 24px/1.35 var(--serif);color:var(--acid)}
-.manifesto-copy .manifesto-end{margin-top:6px;padding-top:14px;border-top:2px solid var(--acid);font:28px/1.15 var(--display);text-transform:uppercase;color:var(--bone)}
+.manifesto-copy .manifesto-end{align-self:stretch;margin-top:6px;padding-top:14px;border-top:2px solid var(--acid);font:28px/1.15 var(--display);text-transform:uppercase;color:var(--bone)}
 .portrait .manifesto-copy p{font-size:26px}
 .portrait .manifesto-title{font-size:78px}
 .portrait .manifesto-copy .manifesto-q{font-size:30px}
 .portrait .manifesto-copy .manifesto-end{font-size:36px}
 
 /* ---------- Contacto: «Pase, sin miedo!» ---------- */
-.contact-main .pase{margin:14px 0 0;font-size:58px;line-height:.95;color:var(--acid)}
+.contact-main .pase{margin:4px 0 0;font-size:42px;line-height:1;color:var(--acid)}
 .portrait .contact-main .pase{font-size:76px}
 
 /* Contacto en el celular: todo centrado y en una sola columna ordenada. */
@@ -357,3 +369,5 @@ body:not(.is-inside) .menu-btn{opacity:0;visibility:hidden;pointer-events:none}
 .portrait .contact-cols .menu-links{align-items:center}
 .portrait .holo-foot{flex-direction:column;justify-content:center;text-align:center;gap:10px}
 .holo-foot a{color:var(--acid)}
+.holo-foot .foot-studio{margin-left:auto}
+.portrait .holo-foot .foot-studio{margin-left:0}

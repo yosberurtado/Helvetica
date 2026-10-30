@@ -138,7 +138,8 @@
       <p class="slash">/ Proyectos /</p>
       <h2 class="display small">Historias que dejan huella.</h2>
       <p class="intro">Cada proyecto es una oportunidad para imaginar algo diferente. Conoce algunas de las historias, personajes y experiencias que hemos ayudado a crear.</p>
-      <div class="projects">
+      <div class="pcar" data-i="0">
+        <div class="pcar-view"><div class="projects">
         <button type="button" class="project" data-open="de-todo-chile">
           <img src="assets/proyectos/de-todo-chile-1.jpg" alt="De Todo Chile" width="1200" height="1000">
           <h3>De Todo Chile</h3>
@@ -173,6 +174,10 @@
           <h3>Bye Company</h3>
           <p>Empresa especialista en la solución de problemáticas y contratiempos en relación a la organización de eventos.</p>
         </button>
+        </div></div>
+        <button type="button" class="pcar-btn prev" aria-label="Proyectos anteriores">‹</button>
+        <button type="button" class="pcar-btn next" aria-label="Más proyectos">›</button>
+        <div class="pcar-dots"></div>
       </div>
     </div>
 
@@ -333,7 +338,7 @@
           <input name="name" placeholder="Nombre" autocomplete="name" aria-label="Nombre" required>
           <input name="email" type="email" placeholder="Correo electrónico" autocomplete="email" aria-label="Correo electrónico" required>
           <input class="full" name="company" placeholder="Empresa u organización" autocomplete="organization" aria-label="Empresa u organización">
-          <textarea name="message" rows="3" placeholder="Cuéntanos tu idea o desafío" aria-label="Cuéntanos tu idea o desafío" required></textarea>
+          <textarea name="message" rows="2" placeholder="Cuéntanos tu idea o desafío" aria-label="Cuéntanos tu idea o desafío" required></textarea>
           <label class="hp" aria-hidden="true">Sitio web <input name="sitio_web" tabindex="-1" autocomplete="off"></label>
           <button type="submit" class="btn-solid">Enviar mi idea</button>
           <p class="form-status" aria-live="polite"></p>
@@ -362,7 +367,7 @@
     <footer class="holo-foot">
       <img src="assets/brand/logo-casa-cuco.png" alt="Casa Cuco" width="900" height="410">
       <p>© 2026 Casa Cuco. Todos los derechos reservados.</p>
-      <p>Un estudio de <a href="https://www.grupokeipoint.com" target="_blank" rel="noopener">Grupo Keipoint</a>.</p>
+      <p class="foot-studio">Un estudio de <a href="https://www.grupokeipoint.com" target="_blank" rel="noopener">Grupo Keipoint</a></p>
     </footer>
   </div>
 </section>

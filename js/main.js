@@ -443,7 +443,7 @@ function buildInterior() {
     const pp = panels[float.room];
     float.portrait = portrait;
     fg.rotation.y = pp.group.rotation.y; float.normal.copy(pp.normal); float.along.copy(pp.along);
-    const [pxW, pxH, s] = portrait ? [760, 1240, 0.0031] : [880, 1000, 0.0034];
+    const [pxW, pxH, s] = portrait ? [760, 1560, 0.0031] : [880, 1240, 0.0034]; // alta: el texto de la ficha se lee completo
     const w = pxW * s, h = pxH * s, cy = (portrait ? 0.5 : 0.55) + h / 2;
     float.w = w; float.h = h;
     float.center.copy(pp.center).addScaledVector(pp.normal, 2.2); float.center.y = cy;
@@ -758,6 +758,7 @@ function setScene(s) {
   cssRenderer.domElement.style.display = inside ? '' : 'none';
   $('#extUI').hidden = inside; $('#intUI').hidden = !inside;
   document.body.classList.toggle('is-inside', inside); // el menú de secciones solo se muestra dentro de la casa
+  if (inside) refreshProjectCarousels(); // con la capa visible ya se puede medir el ancho de las tarjetas
 }
 setScene(ext.scene);
 
@@ -801,6 +802,29 @@ function goTo(id) {
   if (mode === 'exterior') enterHouse(i);
   else if (mode === 'interior') flyToRoom(i);
 }
+// ---------------------------------------------------------------- Carrusel de tarjetas de Proyectos
+// Muestra 4 tarjetas (2 en vertical); las flechas avanzan de a una y al final vuelven al inicio.
+function slideProjects(car, i) {
+  const track = car.querySelector('.projects'), cards = track.children;
+  const vis = Math.round(parseFloat(getComputedStyle(car).getPropertyValue('--vis'))) || 4;
+  const max = Math.max(0, cards.length - vis);
+  i = i > max ? 0 : i < 0 ? max : i;
+  car.dataset.i = i;
+  const step = cards.length > 1 ? cards[1].offsetLeft - cards[0].offsetLeft : 0;
+  track.style.transform = `translateX(${-i * step}px)`;
+  const dots = car.querySelector('.pcar-dots');
+  if (dots.children.length !== max + 1) {
+    dots.replaceChildren(...Array.from({ length: max + 1 }, (_, k) => {
+      const d = document.createElement('button'); d.type = 'button'; d.className = 'pcar-dot'; d.dataset.i = k;
+      d.setAttribute('aria-label', `Proyectos, posición ${k + 1}`); return d;
+    }));
+  }
+  [...dots.children].forEach((d, k) => d.classList.toggle('on', k === i));
+  car.querySelectorAll('.pcar-btn').forEach((b) => (b.hidden = max === 0));
+}
+const refreshProjectCarousels = () => document.querySelectorAll('#css-layer .pcar').forEach((c) => slideProjects(c, +c.dataset.i || 0));
+refreshProjectCarousels();
+
 // ---------------------------------------------------------------- Fichas de proyecto flotantes
 let floatOpen = null, carTimer = null;
 const closeX = () => {
@@ -895,6 +919,12 @@ document.addEventListener('click', (e) => {
     }
     if (e.target.closest('a, input, textarea')) return;
     closeProject(); // clic sobre la ficha: se oculta
+    return;
+  }
+  const pb = e.target.closest('.pcar-btn, .pcar-dot');
+  if (pb) {
+    const car = pb.closest('.pcar');
+    slideProjects(car, pb.classList.contains('pcar-dot') ? +pb.dataset.i : +car.dataset.i + (pb.classList.contains('next') ? 1 : -1));
     return;
   }
   const open = e.target.closest('[data-open]');
@@ -1296,6 +1326,7 @@ addEventListener('resize', () => {
   renderer.setSize(innerWidth, innerHeight); composer.setSize(innerWidth, innerHeight);
   cssRenderer.setSize(innerWidth, innerHeight);
   if (wantPortrait() !== portraitLayout) { portraitLayout = wantPortrait(); int.layoutPanels(portraitLayout); }
+  refreshProjectCarousels();
   if (atPanel != null && !flight && mode === 'interior') {
     const f = panelFit(zoomTarget());
     player.pos.copy(f.view); player.yaw = f.yaw; player.pitch = f.pitch; zoomDist = null;
