@@ -49,7 +49,10 @@ img{max-width:100%}
 .menu-btn{display:none;border:1px solid #daff0266;background:#070707d9;color:var(--acid);padding:11px 16px;border-radius:30px;font:600 11px var(--ui);letter-spacing:.12em;text-transform:uppercase;cursor:pointer}
 /* Menú de secciones: solo dentro de la casa; afuera queda la portada limpia. */
 .nav,.menu-btn{transition:opacity .45s,visibility .45s}
-body:not(.is-inside) .nav,body:not(.is-inside) .menu-btn{opacity:0;visibility:hidden;pointer-events:none}
+/* Afuera, el menú está oculto y aparece al pasar el mouse por la barra superior (o al llegar con el teclado). */
+body:not(.is-inside) .nav{opacity:0}
+body:not(.is-inside) .topbar:hover .nav,body:not(.is-inside) .nav:focus-within{opacity:1}
+body:not(.is-inside) .menu-btn{opacity:0;visibility:hidden;pointer-events:none}
 #world.over-door{cursor:pointer}
 
 /* ---------- Botones ---------- */
@@ -123,6 +126,7 @@ body:not(.is-inside) .nav,body:not(.is-inside) .menu-btn{opacity:0;visibility:hi
 .hero-grid{display:grid;grid-template-columns:1fr 300px;gap:40px;align-items:center}
 .hero-copy{display:flex;flex-direction:column;gap:14px;min-width:0}
 .hero-mark{width:100%;height:auto}
+.hero-mark.anim{will-change:transform}
 .btn-outline{align-self:flex-start;margin-top:10px;padding:14px 24px;border:2px solid var(--acid);color:var(--acid);font:21px var(--display);text-transform:uppercase}
 .btn-outline:hover{background:var(--acid);color:var(--ink)}
 .looking{border-top:2px solid var(--acid);padding-top:18px;display:grid;grid-template-columns:1fr;gap:14px}
@@ -133,28 +137,33 @@ body:not(.is-inside) .nav,body:not(.is-inside) .menu-btn{opacity:0;visibility:hi
 
 /* Nosotros */
 .about-block{display:flex;flex-direction:column;gap:6px}
-.about-grid{display:grid;grid-template-columns:440px 1fr;gap:44px;align-items:center}
+.about-grid{display:grid;grid-template-columns:420px 1fr;gap:52px;align-items:center}
 .about-art{margin:0;aspect-ratio:1;max-width:100%;display:grid;place-items:center;background:var(--ink);border:1px solid #daff0255}
 .about-art svg{width:78%;height:78%;color:var(--bone)}
-.about-art.team{border:0;background:none;box-shadow:0 0 0 2px #daff02} /* sin sombra difusa: mantiene fluido el recorrido */
-.about-art.team img{display:block;width:100%;height:100%;object-fit:cover}
+.about-art.team{border:0;background:none;aspect-ratio:1} /* imagen con fondo transparente sobre el panel */
+.about-art.team img{display:block;width:100%;height:100%;object-fit:contain}
+.shout{font-size:74px;line-height:.92;letter-spacing:-.01em}
+.shout span{display:inline-block;margin-top:10px;padding:6px 16px 10px;background:var(--ink);color:var(--acid);transform:rotate(-2.5deg);box-shadow:8px 8px 0 var(--acid)}
+.about-copy .about-lead{font:600 27px/1.3 var(--serif);max-width:24ch}
+.about-copy .btn-bar{align-self:flex-start;margin-top:6px}
 .about-copy{display:flex;flex-direction:column;gap:14px;min-width:0}
 .about-copy p{margin:0;font-size:17px;line-height:1.45;max-width:58ch}
 .btn-bar{align-self:flex-start;margin-top:12px;padding:15px 26px;background:var(--acid);color:var(--ink);font:20px var(--display);text-transform:uppercase}
 .btn-bar:hover{box-shadow:0 0 30px #daff02aa}
 
 /* Proyectos */
-.projects{display:grid;grid-template-columns:repeat(4,1fr);gap:20px}
+.projects{display:grid;grid-template-columns:1fr 1fr;gap:14px 18px}
 
 /* Proyectos: tarjetas y páginas internas */
 .projects-list{display:flex;flex-direction:column;gap:14px}
-.project{min-width:0;display:flex;flex-direction:column;gap:6px;padding:10px 12px 14px;border:1px solid #daff0233;border-radius:4px;background:#151515e6;color:inherit;text-align:left;font:inherit;cursor:pointer;transition:transform .2s,border-color .2s}
+/* Tarjeta horizontal (imagen 1200×1000 a la izquierda): las seis caben en el panel sin desplazarse. */
+.project{min-width:0;display:grid;grid-template-columns:150px 1fr;grid-auto-rows:min-content;align-content:start;column-gap:16px;row-gap:5px;padding:10px 12px 10px 10px;border:1px solid #daff0233;border-radius:4px;background:#151515e6;color:inherit;text-align:left;font:inherit;cursor:pointer;transition:transform .2s,border-color .2s}
 .project:hover{border-color:var(--acid)}
 .project:hover{transform:translateY(-4px)}
 .project:hover img{border-color:var(--acid)}
-.project img{display:block;width:100%;height:auto;aspect-ratio:4/3;object-fit:cover;border-radius:2px;margin-bottom:4px}
-.project h3{margin:6px 0 0;font:21px/1.05 var(--display);text-transform:uppercase}
-.project p{margin:0;font-size:14px;line-height:1.4;color:#e4e4e4}
+.project img{grid-row:1/span 4;display:block;width:100%;height:auto;aspect-ratio:6/5;object-fit:cover;border-radius:2px}
+.project h3{margin:2px 0 0;font:20px/1.05 var(--display);text-transform:uppercase}
+.project p{margin:0;font-size:13.5px;line-height:1.38;color:#e4e4e4}
 .project .cats{font-size:10px}
 .project-detail{display:flex;flex-direction:column;gap:14px}
 .back{align-self:flex-start;padding:8px 14px;border:1px solid #daff0266;border-radius:30px;background:#070707;color:var(--acid);font:600 12px var(--ui);letter-spacing:.08em;cursor:pointer}
@@ -221,8 +230,13 @@ body:not(.is-inside) .nav,body:not(.is-inside) .menu-btn{opacity:0;visibility:hi
 .portrait .detail-grid{grid-template-columns:1fr;gap:24px}
 .portrait .detail-copy .detail-sub{font-size:30px}
 .portrait .back{font-size:20px;padding:12px 20px}
-.portrait .about-art{max-width:600px;width:100%}
-.portrait .projects,.portrait .services{grid-template-columns:1fr 1fr;gap:26px}
+.portrait .about-art{max-width:600px;width:100%;justify-self:center}
+.portrait .shout{font-size:84px}
+.portrait .about-copy .about-lead{font-size:34px;max-width:none}
+.portrait .about-copy{align-items:flex-start}
+.portrait .services{grid-template-columns:1fr 1fr;gap:26px}
+.portrait .projects{grid-template-columns:1fr;gap:18px}
+.portrait .project{grid-template-columns:230px 1fr;column-gap:22px}
 .portrait .project h3,.portrait .service h3{font-size:30px}
 .portrait .project p,.portrait .service p{font-size:24px}
 .portrait .contact-form{grid-template-columns:1fr}
@@ -277,7 +291,7 @@ body:not(.is-inside) .nav,body:not(.is-inside) .menu-btn{opacity:0;visibility:hi
 .float-in>*{flex:none}
 .float-x{position:absolute;top:12px;right:14px;z-index:4;width:40px;height:40px;border:1px solid #daff0299;border-radius:50%;background:#070707cc;color:var(--acid);font:26px/1 var(--ui);cursor:pointer}
 .float-x:hover{background:var(--acid);color:var(--ink)}
-.carousel{position:relative;aspect-ratio:16/10;overflow:hidden;border:1px solid #daff0299;border-radius:3px;background:#000;cursor:default}
+.carousel{position:relative;aspect-ratio:6/5;overflow:hidden;border:1px solid #daff0299;border-radius:3px;background:#000;cursor:default}
 .carousel::after{content:"";position:absolute;inset:0;z-index:1;pointer-events:none;background:repeating-linear-gradient(180deg,#daff0212 0 1px,transparent 1px 3px),linear-gradient(180deg,transparent 65%,#050703aa)}
 .slide{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:0;transform:scale(1.06);clip-path:inset(0 0 100% 0);transition:opacity .7s,clip-path .8s cubic-bezier(.2,.7,.2,1),transform 4s linear}
 .slide.on{opacity:1;transform:scale(1);clip-path:inset(0 0 0 0)}
@@ -289,6 +303,7 @@ body:not(.is-inside) .nav,body:not(.is-inside) .menu-btn{opacity:0;visibility:hi
 .car-dot{width:28px;height:4px;padding:0;border:0;background:#ffffff59;cursor:pointer}
 .car-dot.on{background:var(--acid);box-shadow:0 0 10px var(--acid)}
 .float .detail-copy{gap:10px}
+.carousel.single .car-btn,.carousel.single .car-dots{display:none}
 .float .detail-copy .display.small{font-size:38px}
 .float .detail-copy p{font-size:16px;max-width:none}
 .float .detail-copy .detail-sub{font-size:20px}
@@ -316,3 +331,29 @@ body:not(.is-inside) .nav,body:not(.is-inside) .menu-btn{opacity:0;visibility:hi
 #css-layer .holo img{-webkit-user-drag:none}
 #css-layer .holo a,#css-layer .holo button{cursor:pointer}
 #css-layer .holo input,#css-layer .holo textarea{user-select:text;-webkit-user-select:text;cursor:text}
+
+/* ---------- Manifiesto (Nosotros → Ver más) ---------- */
+.manifesto-copy{display:flex;flex-direction:column;gap:14px;padding-top:6px}
+.manifesto-copy p{margin:0;font-size:19px;line-height:1.55;color:#ecece4}
+.manifesto-title{margin:0 0 6px;font-size:64px;line-height:.92;color:var(--bone)}
+.manifesto-title span{display:inline-block;margin-top:6px;padding:4px 14px 8px;background:var(--acid);color:var(--ink);transform:rotate(-2deg)}
+.manifesto-copy .manifesto-q{font:italic 600 24px/1.35 var(--serif);color:var(--acid)}
+.manifesto-copy .manifesto-end{margin-top:6px;padding-top:14px;border-top:2px solid var(--acid);font:28px/1.15 var(--display);text-transform:uppercase;color:var(--bone)}
+.portrait .manifesto-copy p{font-size:26px}
+.portrait .manifesto-title{font-size:78px}
+.portrait .manifesto-copy .manifesto-q{font-size:30px}
+.portrait .manifesto-copy .manifesto-end{font-size:36px}
+
+/* ---------- Contacto: «Pase, sin miedo!» ---------- */
+.contact-main .pase{margin:14px 0 0;font-size:58px;line-height:.95;color:var(--acid)}
+.portrait .contact-main .pase{font-size:76px}
+
+/* Contacto en el celular: todo centrado y en una sola columna ordenada. */
+.portrait .contact-main,.portrait .contact-side{text-align:center;align-items:center}
+.portrait .contact-main p{margin-left:auto;margin-right:auto}
+.portrait .contact-form .btn-solid{justify-self:center}
+.portrait .contact-side .hands{align-self:center}
+.portrait .contact-cols{width:100%;text-align:center}
+.portrait .contact-cols .menu-links{align-items:center}
+.portrait .holo-foot{flex-direction:column;justify-content:center;text-align:center;gap:10px}
+.holo-foot a{color:var(--acid)}

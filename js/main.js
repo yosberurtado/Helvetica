@@ -426,10 +426,9 @@ function buildInterior() {
 
   scene.add(makeDust(350, [-half, half], [0.2, H + 2], [zEnd, 0]));
 
-  // Ficha de proyecto: holograma que se desprende del panel de Proyectos y flota frente a él,
-  // proyectado desde un anillo de luz en el piso.
-  const pp = panels[2];
-  const fg = new THREE.Group(); fg.rotation.y = pp.group.rotation.y; fg.visible = false; scene.add(fg);
+  // Ventana flotante: holograma que se desprende de un panel (fichas de Proyectos, manifiesto de Nosotros)
+  // y flota frente a él, proyectado desde un anillo de luz en el piso.
+  const fg = new THREE.Group(); fg.visible = false; scene.add(fg);
   const floatWrap = document.createElement('div');
   floatWrap.className = 'holo-wrap float';
   floatWrap.innerHTML = '<div class="holo float-holo"><div class="float-in"></div></div>';
@@ -439,8 +438,11 @@ function buildInterior() {
   const rings = [[0.78, 0.84], [0.5, 0.53], [1.02, 1.04]].map(([a, b]) => { const m = new THREE.Mesh(new THREE.RingGeometry(a, b, 72), projMat); m.rotation.x = -Math.PI / 2; m.position.y = 0.02; proj.add(m); return m; });
   const floatBeam = new THREE.Mesh(new THREE.CylinderGeometry(0.8, 1, 1, 64, 1, true), new THREE.MeshBasicMaterial({ map: beamTex, color: 0xeaff8a, transparent: true, opacity: 0, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide, fog: false }));
   floatBeam.rotation.x = Math.PI; proj.add(floatBeam);
-  const float = { group: fg, css: floatCss, wrap: floatWrap, proj, beam: floatBeam, rings, projMat, center: new V3(), normal: pp.normal, along: pp.along, w: 0, h: 0, frame: null };
+  const float = { group: fg, css: floatCss, wrap: floatWrap, proj, beam: floatBeam, rings, projMat, center: new V3(), normal: new V3(), along: new V3(), w: 0, h: 0, frame: null, room: 2, portrait: false };
   function layoutFloat(portrait) {
+    const pp = panels[float.room];
+    float.portrait = portrait;
+    fg.rotation.y = pp.group.rotation.y; float.normal.copy(pp.normal); float.along.copy(pp.along);
     const [pxW, pxH, s] = portrait ? [760, 1240, 0.0031] : [880, 1000, 0.0034];
     const w = pxW * s, h = pxH * s, cy = (portrait ? 0.5 : 0.55) + h / 2;
     float.w = w; float.h = h;
@@ -499,6 +501,7 @@ function buildInterior() {
 
   return {
     scene, panels, float, rects, obstacles, marker, mirror, solids, doorHits, layoutPanels,
+    floatTo(room) { if (float.room !== room) { float.room = room; layoutFloat(float.portrait); } },
     update(t) {
       eyes.forEach((e, i) => (e.material.emissiveIntensity = 3.4 + 0.9 * Math.sin(t * 1.3 + i)));
       doors.forEach((d, i) => (d.light.intensity = (d.k === NWALL - 1 ? 30 : 16) + 3 * Math.sin(t * 1.1 + i)));
@@ -800,13 +803,43 @@ function goTo(id) {
 }
 // ---------------------------------------------------------------- Fichas de proyecto flotantes
 let floatOpen = null, carTimer = null;
+const closeX = () => {
+  const x = document.createElement('button');
+  x.type = 'button'; x.className = 'float-x'; x.setAttribute('aria-label', 'Cerrar'); x.textContent = '×';
+  return x;
+};
+// Muestra la ventana flotante frente al panel de la sala `room` con el contenido dado.
+function showFloat(id, room, nodes) {
+  if (mode !== 'interior') return;
+  const fl = int.float, inner = fl.wrap.querySelector('.float-in');
+  if (floatOpen && fl.room !== room) closeProject(true);
+  int.floatTo(room);
+  inner.replaceChildren(...nodes);
+  inner.scrollTop = 0;
+  fl.wrap.classList.toggle('is-manifesto', id === 'manifiesto');
+  const wasOpen = floatOpen; floatOpen = id;
+  fl.wrap.classList.remove('closing', 'opening'); void fl.wrap.offsetWidth; fl.wrap.classList.add('opening');
+  fl.group.visible = true; fl.proj.visible = true;
+  if (!wasOpen) tween(800, (k) => {
+    const e = ease(k);
+    fl.group.scale.set(Math.max(0.02, ease(Math.min(1, k * 1.5))), Math.max(0.02, ease(Math.max(0, (k - 0.2) / 0.8))), 1);
+    fl.beam.material.opacity = 0.32 * e; fl.projMat.opacity = 0.9 * e;
+  });
+  hideTip();
+  flyToRoom(room, false, fl);
+}
+// «Ver más» de Nosotros: el manifiesto en la ventana flotante.
+function openManifesto() {
+  const art = document.querySelector('#sec-nosotros .manifesto');
+  if (!art) return;
+  const copy = document.createElement('div'); copy.className = 'manifesto-copy';
+  copy.append(...[...art.children].map((n) => n.cloneNode(true)));
+  stopCarousel();
+  showFloat('manifiesto', 1, [closeX(), copy]);
+}
 function openProject(id) {
   const art = document.querySelector(`#sec-proyectos .project-detail[data-project="${id}"]`);
   if (!art || mode !== 'interior') return;
-  const fl = int.float, inner = fl.wrap.querySelector('.float-in');
-  inner.replaceChildren();
-  const x = document.createElement('button');
-  x.type = 'button'; x.className = 'float-x'; x.setAttribute('aria-label', 'Cerrar'); x.textContent = '×';
   const car = document.createElement('div'); car.className = 'carousel';
   const dots = document.createElement('div'); dots.className = 'car-dots';
   [...art.querySelectorAll('.detail-media img')].forEach((im, k) => {
@@ -820,19 +853,8 @@ function openProject(id) {
     const b = document.createElement('button'); b.type = 'button'; b.className = 'car-btn ' + cls; b.setAttribute('aria-label', label); b.textContent = txt; car.appendChild(b);
   }
   car.appendChild(dots);
-  inner.append(x, car, art.querySelector('.detail-copy').cloneNode(true));
-  inner.scrollTop = 0;
-  const wasOpen = floatOpen; floatOpen = id;
-  fl.wrap.classList.remove('closing', 'opening'); void fl.wrap.offsetWidth; fl.wrap.classList.add('opening');
-  fl.group.visible = true; fl.proj.visible = true;
-  if (!wasOpen) tween(800, (k) => {
-    const e = ease(k);
-    fl.group.scale.set(Math.max(0.02, ease(Math.min(1, k * 1.5))), Math.max(0.02, ease(Math.max(0, (k - 0.2) / 0.8))), 1);
-    fl.beam.material.opacity = 0.32 * e; fl.projMat.opacity = 0.9 * e;
-  });
-  startCarousel();
-  hideTip();
-  flyToRoom(2, false, fl);
+  showFloat(id, 2, [closeX(), car, art.querySelector('.detail-copy').cloneNode(true)]);
+  if (car.querySelectorAll('.slide').length > 1) startCarousel(); else { stopCarousel(); car.classList.add('single'); }
 }
 function closeProject(instant = false) {
   if (!floatOpen) return;
@@ -846,7 +868,7 @@ function closeProject(instant = false) {
     fl.group.scale.set(Math.max(0.02, e), Math.max(0.02, e * e), 1);
     fl.beam.material.opacity = 0.32 * e; fl.projMat.opacity = 0.9 * e;
   }, () => { fl.group.scale.set(1, 1, 1); hide(); });
-  if (mode === 'interior' && atPanel === 2) flyToRoom(2);
+  if (mode === 'interior' && atPanel === fl.room) flyToRoom(fl.room);
 }
 function showSlide(i) {
   const car = int.float.wrap.querySelector('.carousel');
@@ -877,6 +899,7 @@ document.addEventListener('click', (e) => {
   }
   const open = e.target.closest('[data-open]');
   if (open) { openProject(open.dataset.open); return; }
+  if (e.target.closest('[data-manifesto]')) { openManifesto(); return; }
   // Clic en un panel que no está encuadrado: la cámara se acerca y lo encuadra.
   const wrap = e.target.closest('.holo-wrap');
   if (wrap && mode === 'interior' && !e.target.closest('a, button, input, textarea, label')) {
@@ -1188,7 +1211,7 @@ function updatePanels(dt) {
     // En un recorrido solo se ve el holograma de destino: los de las salas por las que se pasa quedarían
     // de canto al pasarlos (muy costoso de pintar) y solo distraen. Sus marcos de neón siguen visibles.
     const passing = flight && p.room !== atPanel;
-    const want = p.shown && !passing ? (floatOpen && p.room === 2 ? 0.14 : 1) : 0;
+    const want = p.shown && !passing ? (floatOpen && p.room === int.float.room ? 0.14 : 1) : 0;
     p.opacity += (want - p.opacity) * Math.min(1, dt * 6);
     if (Math.abs(want - p.opacity) < 0.004) p.opacity = want;
     // De canto o por detrás se oculta al instante: en ese ángulo el navegador tendría que pintar un área
@@ -1203,7 +1226,7 @@ function updatePanels(dt) {
     p.slab.material.opacity = 0.18 + 0.3 * (1 - p.opacity);
   }
   const fl = int.float;
-  fl.css.visible = fl.group.visible && player.room === 2;
+  fl.css.visible = fl.group.visible && player.room === fl.room;
   if (fl.group.visible) fl.rings.forEach((r, i) => (r.rotation.z += (i % 2 ? -0.4 : 0.6) * dt));
 }
 
