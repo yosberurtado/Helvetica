@@ -472,8 +472,8 @@ function buildInterior() {
     const [pxW, pxH, s] = portrait ? [800, 1240, 0.0045] : [1200, 720, 0.006];
     const w = pxW * s, h = pxH * s, cy = (portrait ? 0.45 : 0.6) + h / 2;
     for (const p of panels) {
-      // Contacto en vertical es más alto (1500 px) para que quepa sin desplazarse; mide lo mismo en la sala.
-      const tall = portrait && ROOMS[p.room].id === 'contacto', k = tall ? 1240 / 1500 : 1;
+      // Servicios y Contacto en vertical son más altos (1500 px) para que quepan sin desplazarse; miden lo mismo en la sala.
+      const tall = portrait && ['servicios', 'contacto'].includes(ROOMS[p.room].id), k = tall ? 1240 / 1500 : 1;
       p.wrap.classList.toggle('portrait', portrait); p.wrap.classList.toggle('tall', tall);
       p.css.scale.setScalar(s * k);
       p.group.position.y = cy; p.center.y = cy;

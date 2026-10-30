@@ -172,7 +172,8 @@ body:not(.is-inside) .menu-btn{opacity:0;visibility:hidden;pointer-events:none}
 .project:hover{border-color:var(--acid)}
 .project:hover{transform:translateY(-4px)}
 .project:hover img{border-color:var(--acid)}
-.project img{display:block;width:100%;height:auto;aspect-ratio:6/5;object-fit:cover;border-radius:2px;margin-bottom:4px}
+/* Fotos: siempre completas (sin recorte), fondo negro donde sobra espacio y marco blanco delgado. */
+.project img{display:block;width:100%;height:auto;aspect-ratio:6/5;object-fit:contain;background:#000;border:2px solid #fff;border-radius:2px;margin-bottom:4px}
 .project h3{margin:6px 0 0;font:21px/1.05 var(--display);text-transform:uppercase}
 .project p{margin:0;font-size:14px;line-height:1.4;color:#e4e4e4}
 .project .cats{font-size:10px}
@@ -192,7 +193,7 @@ body:not(.is-inside) .menu-btn{opacity:0;visibility:hidden;pointer-events:none}
 .services{display:grid;grid-template-columns:repeat(4,1fr);gap:22px}
 .service{display:flex;flex-direction:column;gap:8px;min-width:0;padding:10px 12px 14px;border:1px solid #daff0233;border-radius:4px;background:#151515e6}
 .service-img{position:relative}
-.service-img img{display:block;width:100%;height:auto;aspect-ratio:16/9;object-fit:cover;border-radius:2px}
+.service-img img{display:block;width:100%;height:auto;aspect-ratio:16/9;object-fit:contain;background:#000;border:2px solid #fff;border-radius:2px}
 .badge{position:absolute;left:10px;top:10px;padding:6px 9px;background:var(--acid);color:var(--ink);font:700 16px var(--serif)}
 .service h3{margin:6px 0 0;font:21px/1.05 var(--display);text-transform:uppercase}
 .service p{margin:0;font-size:14px;line-height:1.42;color:#e4e4e4}
@@ -303,9 +304,9 @@ body:not(.is-inside) .menu-btn{opacity:0;visibility:hidden;pointer-events:none}
 .float-in>*{flex:none}
 .float-x{position:absolute;top:12px;right:14px;z-index:4;width:40px;height:40px;border:1px solid #daff0299;border-radius:50%;background:#070707cc;color:var(--acid);font:26px/1 var(--ui);cursor:pointer}
 .float-x:hover{background:var(--acid);color:var(--ink)}
-.carousel{position:relative;aspect-ratio:6/5;overflow:hidden;border:1px solid #daff0299;border-radius:3px;background:#000;cursor:default}
+.carousel{position:relative;aspect-ratio:6/5;overflow:hidden;border:2px solid #fff;border-radius:3px;background:#000;cursor:default}
 .carousel::after{content:"";position:absolute;inset:0;z-index:1;pointer-events:none;background:repeating-linear-gradient(180deg,#daff0212 0 1px,transparent 1px 3px),linear-gradient(180deg,transparent 65%,#050703aa)}
-.slide{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:0;transform:scale(1.06);clip-path:inset(0 0 100% 0);transition:opacity .7s,clip-path .8s cubic-bezier(.2,.7,.2,1),transform 4s linear}
+.slide{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;background:#000;opacity:0;transform:scale(1.06);clip-path:inset(0 0 100% 0);transition:opacity .7s,clip-path .8s cubic-bezier(.2,.7,.2,1),transform 4s linear}
 .slide.on{opacity:1;transform:scale(1);clip-path:inset(0 0 0 0)}
 .car-btn{position:absolute;top:50%;z-index:2;width:46px;height:46px;margin-top:-23px;border:1px solid var(--acid);border-radius:50%;background:#070707b8;color:var(--acid);font:30px/1 var(--ui);padding:0 0 4px;cursor:pointer}
 .car-btn:hover{background:var(--acid);color:var(--ink)}
@@ -389,3 +390,16 @@ body:not(.is-inside) .menu-btn{opacity:0;visibility:hidden;pointer-events:none}
 .portrait .holo-foot{gap:6px;font-size:19px}
 .portrait .holo-foot img{height:42px}
 .holo-wrap.portrait.tall{height:1500px}
+
+
+/* Servicios en una sola pantalla, sin desplazarse. */
+.services+.btn-bar{margin-top:0;padding:12px 24px}
+[data-room="servicios"] .intro{max-width:none}
+.service{gap:6px}
+.service h3{font-size:19px}
+.service p{font-size:13.5px;line-height:1.38}
+.portrait .services{gap:20px}
+.portrait .service h3{font-size:26px}
+.portrait .service p{font-size:20px;line-height:1.34}
+[data-room="servicios"].portrait .intro{font-size:22px}
+.light .about-copy .slash{color:var(--acid)} /* la etiqueta conserva su color sobre el fondo negro */
