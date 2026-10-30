@@ -198,7 +198,7 @@ body:not(.is-inside) .menu-btn{opacity:0;visibility:hidden;pointer-events:none}
 .service p{margin:0;font-size:14px;line-height:1.42;color:#e4e4e4}
 
 /* Contacto */
-.contact-grid{display:grid;grid-template-columns:1.1fr 1fr;gap:48px}
+.contact-grid{display:grid;grid-template-columns:1.4fr 1fr;gap:44px}
 .contact-grid>div{min-width:0}
 .contact-main p{margin:4px 0 0;font-size:16.5px;line-height:1.4}
 .contact-main .display{margin-top:2px}
@@ -251,7 +251,7 @@ body:not(.is-inside) .menu-btn{opacity:0;visibility:hidden;pointer-events:none}
 .portrait .pcar-dot{width:40px;height:8px}
 .portrait .project h3,.portrait .service h3{font-size:30px}
 .portrait .project p,.portrait .service p{font-size:24px}
-.portrait .contact-form{grid-template-columns:1fr}
+.portrait .contact-form{grid-template-columns:1fr 1fr}
 .portrait .contact-form input,.portrait .contact-form textarea{font-size:24px;padding:16px}
 .portrait .contact-form .btn-solid{font-size:20px;padding:18px 30px}
 .portrait .form-status{font-size:22px!important}
@@ -357,7 +357,7 @@ body:not(.is-inside) .menu-btn{opacity:0;visibility:hidden;pointer-events:none}
 .portrait .manifesto-copy .manifesto-end{font-size:36px}
 
 /* ---------- Contacto: «Pase, sin miedo!» ---------- */
-.contact-main .pase{margin:4px 0 0;font-size:42px;line-height:1;color:var(--acid)}
+.contact-main .pase{margin:6px 0 0;font-size:54px;line-height:1;color:var(--acid)}
 .portrait .contact-main .pase{font-size:76px}
 
 /* Contacto en el celular: todo centrado y en una sola columna ordenada. */
@@ -371,3 +371,21 @@ body:not(.is-inside) .menu-btn{opacity:0;visibility:hidden;pointer-events:none}
 .holo-foot a{color:var(--acid)}
 .holo-foot .foot-studio{margin-left:auto}
 .portrait .holo-foot .foot-studio{margin-left:0}
+
+/* Contacto en una sola pantalla, sin desplazarse. */
+.contact-main .display{font-size:42px}
+.contact-form{grid-template-columns:1fr 1fr 1.3fr}
+.contact-form input{letter-spacing:.02em}
+.contact-form .full{grid-column:auto}
+.portrait .contact-form .full{grid-column:1/-1}
+.portrait .contact-main .display{font-size:46px}
+.portrait .contact-main p{font-size:23px;margin-top:2px}
+.portrait .contact-main .pase{font-size:58px;margin-top:10px}
+.portrait .contact-side .hands{display:none} /* decorativo: en el celular se prioriza que todo quepa */
+.portrait .contact-side{gap:14px}
+.portrait .contact-side p{font-size:23px}
+.portrait .contact-side h3{font-size:25px}
+.portrait .contact-form input,.portrait .contact-form textarea{font-size:22px;padding:13px}
+.portrait .holo-foot{gap:6px;font-size:19px}
+.portrait .holo-foot img{height:42px}
+.holo-wrap.portrait.tall{height:1500px}

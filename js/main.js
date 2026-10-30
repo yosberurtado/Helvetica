@@ -472,13 +472,15 @@ function buildInterior() {
     const [pxW, pxH, s] = portrait ? [800, 1240, 0.0045] : [1200, 720, 0.006];
     const w = pxW * s, h = pxH * s, cy = (portrait ? 0.45 : 0.6) + h / 2;
     for (const p of panels) {
-      p.wrap.classList.toggle('portrait', portrait);
-      p.css.scale.setScalar(s);
+      // Contacto en vertical es más alto (1500 px) para que quepa sin desplazarse; mide lo mismo en la sala.
+      const tall = portrait && ROOMS[p.room].id === 'contacto', k = tall ? 1240 / 1500 : 1;
+      p.wrap.classList.toggle('portrait', portrait); p.wrap.classList.toggle('tall', tall);
+      p.css.scale.setScalar(s * k);
       p.group.position.y = cy; p.center.y = cy;
-      p.w = w; p.h = h;
+      p.w = w * k; p.h = h;
       if (p.frame) { p.group.remove(p.frame); p.frame.traverse((o) => o.geometry?.dispose()); }
       const f = new THREE.Group();
-      const hw = w / 2 + 0.15, hh = h / 2 + 0.14;
+      const hw = p.w / 2 + 0.15, hh = h / 2 + 0.14;
       p.slab = new THREE.Mesh(new THREE.BoxGeometry(hw * 2, hh * 2, 0.08), slabMat.clone()); f.add(p.slab);
       if (p.light) { p.slab.material.color.set('#d4d6d5'); p.slab.material.emissive.set('#3c3e3d'); }
       for (const [a, b] of [[[-hw, -hh], [hw, -hh]], [[hw, -hh], [hw, hh]], [[hw, hh], [-hw, hh]], [[-hw, hh], [-hw, -hh]]]) f.add(bar(new V3(a[0], a[1], 0), new V3(b[0], b[1], 0), 0.06, neonMat));
