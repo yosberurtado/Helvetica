@@ -24,8 +24,18 @@ const ROOMS = [
 
 // ---------------------------------------------------------------- Render base
 const canvas = $('#world');
-const renderer = new THREE.WebGLRenderer({ canvas, antialias: !isTouch, powerPreference: 'high-performance' });
-let PR = Math.min(devicePixelRatio, isTouch ? 1.25 : 1.75);
+const renderer = new THREE.WebGLRenderer({ canvas, antialias: !isTouch, powerPreference: isTouch ? 'default' : 'high-performance' });
+// Si el navegador se queda sin memoria gráfica y pierde la escena 3D, se avisa y se recarga sola (en vez de quedar en negro).
+canvas.addEventListener('webglcontextlost', (e) => {
+  e.preventDefault();
+  const l = document.getElementById('loading'); l?.classList.remove('off');
+  if (lightMode) return; // ya se intentó en modo liviano: no se recarga en bucle
+  try { sessionStorage.setItem('ccu3d-liviano', '1'); } catch { /* sin almacenamiento: se recarga igual */ }
+  setTimeout(() => location.reload(), 1200);
+});
+// Modo liviano: si en esta visita el navegador ya perdió la escena 3D por falta de memoria, se parte con menos carga.
+const lightMode = (() => { try { return sessionStorage.getItem('ccu3d-liviano') === '1'; } catch { return false; } })();
+let PR = lightMode ? 1 : Math.min(devicePixelRatio, isTouch ? 1.25 : 1.75);
 renderer.setPixelRatio(PR);
 renderer.setSize(innerWidth, innerHeight);
 renderer.outputColorSpace = THREE.SRGBColorSpace;
@@ -504,6 +514,13 @@ function buildInterior() {
 
   return {
     scene, panels, float, rects, obstacles, marker, mirror, solids, doorHits, layoutPanels,
+    // Piso liviano: sin reflejo (la escena se dibuja una vez y no dos); queda un concreto oscuro brillante.
+    lowFloor() {
+      if (!mirror.visible) return;
+      mirror.visible = false;
+      Object.assign(overlay.material, { transparent: false, opacity: 1, roughness: 0.42, metalness: 0.25 });
+      overlay.material.color.set('#2b2b2b'); overlay.material.needsUpdate = true;
+    },
     floatTo(room) { if (float.room !== room) { float.room = room; layoutFloat(float.portrait); } },
     update(t) {
       eyes.forEach((e, i) => (e.material.emissiveIntensity = 3.4 + 0.9 * Math.sin(t * 1.3 + i)));
@@ -517,6 +534,8 @@ function buildInterior() {
 const ext = buildExterior();
 const int = buildInterior();
 const wantPortrait = () => innerWidth < innerHeight * 0.9;
+// Celulares con poca memoria (Chrome informa la memoria del equipo): parten con el piso liviano.
+if (lightMode || (isTouch && (navigator.deviceMemory || 8) <= 4)) int.lowFloor();
 let portraitLayout = wantPortrait();
 int.layoutPanels(portraitLayout);
 let scene = ext.scene;
@@ -882,9 +901,11 @@ function fitPanels() {
   refreshProjectCarousels();
   for (const p of int.panels) {
     // El renderizador 3D agrega cada panel a la página recién al dibujarlo: si aún no está, se agrega un momento para medir.
-    const tmp = !p.wrap.isConnected;
+    const tmp = !p.wrap.isConnected, disp = p.wrap.style.display;
     if (tmp) $('#css-layer').appendChild(p.wrap);
+    p.wrap.style.display = ''; // también si está oculto, para poder medirlo
     fitText(p.wrap.querySelector('.holo-in'), 0.8, 1.45);
+    p.wrap.style.display = disp;
     if (tmp) p.wrap.remove();
   }
   refreshProjectCarousels();
@@ -1398,6 +1419,11 @@ function updatePanels(dt) {
     if (o !== p.lastO) { p.lastO = o; p.wrap.style.opacity = o; }
     const vis = o > 0.01 ? 'visible' : 'hidden'; // oculto sin sacarlo del DOM: aparece sin tirón
     if (vis !== p.vis) { p.vis = vis; p.wrap.style.visibility = vis; }
+    // Celular: solo el holograma de la sala actual queda cargado (cada uno ocupa memoria gráfica del tamaño de la pantalla).
+    if (isTouch) {
+      const keep = o > 0.01 || p.room === player.room;
+      if (p.css.visible !== keep) { p.css.visible = keep; if (keep && p.room === 2) requestAnimationFrame(refreshProjectCarousels); }
+    }
     const pe = o > 0.6 ? 'auto' : 'none';
     if (pe !== p.pe) { p.pe = pe; p.wrap.style.pointerEvents = pe; }
     p.slab.material.opacity = 0.18 + 0.3 * (1 - p.opacity);
@@ -1439,18 +1465,19 @@ function warmUp() {
   for (const [o, v, f] of restore) { o.visible = v; o.frustumCulled = f; }
   renderPass.scene = scene;
   camera.position.copy(pos); camera.quaternion.copy(quat); camera.fov = fov; camera.updateProjectionMatrix();
-  document.querySelectorAll('#css-layer img').forEach((img) => img.decode?.().catch(() => {}));
+  if (!isTouch) document.querySelectorAll('#css-layer img').forEach((img) => img.decode?.().catch(() => {})); // en el celular ahorra memoria
 }
 
 // Calidad adaptable: si el equipo no alcanza ~40 cuadros por segundo de forma sostenida, baja la resolución
 // interna un paso (hasta 1×) para que la animación siga fluida.
 let slowFor = 0;
 function adaptQuality(ms) {
-  if (!booted || document.hidden || mode === 'transition' || PR <= 1 || ms > 250) return;
+  if (!booted || document.hidden || mode === 'transition' || ms > 250 || (PR <= 1 && !int.mirror.visible)) return;
   slowFor = ms > 25 ? slowFor + ms : Math.max(0, slowFor - ms * 2);
   if (slowFor > 2500) {
-    slowFor = 0; PR = Math.max(1, PR - 0.25);
-    renderer.setPixelRatio(PR); composer.setPixelRatio(PR); composer.setSize(innerWidth, innerHeight);
+    slowFor = 0;
+    if (PR > 1) { PR = Math.max(1, PR - 0.25); renderer.setPixelRatio(PR); composer.setPixelRatio(PR); composer.setSize(innerWidth, innerHeight); }
+    else int.lowFloor(); // último paso: sin reflejo en el piso (dibuja la escena una vez en vez de dos)
   }
 }
 
