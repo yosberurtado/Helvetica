@@ -761,7 +761,7 @@ function setScene(s) {
   cssRenderer.domElement.style.display = inside ? '' : 'none';
   $('#extUI').hidden = inside; $('#intUI').hidden = !inside;
   document.body.classList.toggle('is-inside', inside); // el menú de secciones solo se muestra dentro de la casa
-  if (inside) refreshProjectCarousels(); // con la capa visible ya se puede medir el ancho de las tarjetas
+  if (inside) fitPanels(); // con la capa visible ya se puede medir el texto y las tarjetas
 }
 setScene(ext.scene);
 
@@ -823,10 +823,45 @@ function slideProjects(car, i) {
     }));
   }
   [...dots.children].forEach((d, k) => d.classList.toggle('on', k === i));
-  car.querySelectorAll('.pcar-btn').forEach((b) => (b.hidden = max === 0));
+  // Flechas a la altura del centro de las imágenes: nunca tapan los títulos.
+  const img = cards[0]?.querySelector('img');
+  const top = img && img.offsetHeight ? img.offsetTop + img.offsetHeight / 2 : null;
+  car.querySelectorAll('.pcar-btn').forEach((b) => { b.hidden = max === 0; if (top != null) b.style.top = `${top}px`; });
 }
 const refreshProjectCarousels = () => document.querySelectorAll('#css-layer .pcar').forEach((c) => slideProjects(c, +c.dataset.i || 0));
 refreshProjectCarousels();
+
+// ---------------------------------------------------------------- Texto que aprovecha el espacio
+// Busca el tamaño de letra más grande (factor --fz) con el que todo cabe sin desplazarse; las imágenes
+// no cambian. Así no quedan espacios vacíos y los márgenes son siempre los mismos.
+function fitText(box, min, max) {
+  const scrollers = [box, ...box.querySelectorAll('.detail-copy')];
+  const fits = () => scrollers.every((el) => el.scrollHeight <= el.clientHeight) && box.scrollWidth <= box.clientWidth;
+  const set = (v) => box.style.setProperty('--fz', v.toFixed(3));
+  set(max); if (fits()) return max;
+  set(min); if (!fits()) return min; // no cabe ni al mínimo: queda al mínimo y se desplaza
+  let lo = min, hi = max;
+  for (let i = 0; i < 8; i++) { const m = (lo + hi) / 2; set(m); if (fits()) lo = m; else hi = m; }
+  lo = Math.max(min, lo * 0.97); // margen de seguridad: otros navegadores miden el texto apenas distinto
+  set(lo); return lo;
+}
+function fitPanels() {
+  if (cssRenderer.domElement.style.display === 'none') return; // sin la capa visible no se puede medir
+  refreshProjectCarousels();
+  for (const p of int.panels) fitText(p.wrap.querySelector('.holo-in'), 0.8, 1.45);
+  refreshProjectCarousels();
+}
+document.fonts?.ready.then(() => fitPanels());
+// Si una tipografía termina de cargar después, el texto cambia de tamaño: se vuelve a medir.
+document.fonts?.addEventListener?.('loadingdone', () => { fitPanels(); if (floatOpen) fitFloat(); });
+// Ventana flotante: se mide antes de mostrarla (si aún no está en la página, se agrega un momento para medir).
+function fitFloat() {
+  const w = int.float.wrap, tmp = !w.isConnected;
+  if (tmp) $('#css-layer').appendChild(w);
+  w.style.display = '';
+  fitText(w.querySelector('.float-in'), 1, 1.5); // nunca más chico que el diseño; si sobra espacio, el texto crece
+  if (tmp) w.remove();
+}
 
 // ---------------------------------------------------------------- Fichas de proyecto flotantes
 let floatOpen = null, carTimer = null;
@@ -842,6 +877,7 @@ function showFloat(id, room, nodes) {
   if (floatOpen && fl.room !== room) closeProject(true);
   int.floatTo(room);
   inner.replaceChildren(...nodes);
+  fitFloat();
   inner.scrollTop = 0;
   fl.wrap.classList.toggle('is-manifesto', id === 'manifiesto');
   const wasOpen = floatOpen; floatOpen = id;
@@ -1329,7 +1365,8 @@ addEventListener('resize', () => {
   renderer.setSize(innerWidth, innerHeight); composer.setSize(innerWidth, innerHeight);
   cssRenderer.setSize(innerWidth, innerHeight);
   if (wantPortrait() !== portraitLayout) { portraitLayout = wantPortrait(); int.layoutPanels(portraitLayout); }
-  refreshProjectCarousels();
+  fitPanels();
+  if (floatOpen) fitFloat();
   if (atPanel != null && !flight && mode === 'interior') {
     const f = panelFit(zoomTarget());
     player.pos.copy(f.view); player.yaw = f.yaw; player.pitch = f.pitch; zoomDist = null;
