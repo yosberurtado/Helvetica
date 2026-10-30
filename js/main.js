@@ -854,12 +854,14 @@ function fitPanels() {
 document.fonts?.ready.then(() => fitPanels());
 // Si una tipografía termina de cargar después, el texto cambia de tamaño: se vuelve a medir.
 document.fonts?.addEventListener?.('loadingdone', () => { fitPanels(); if (floatOpen) fitFloat(); });
+// Cuando aparece un mensaje del formulario (enviando, gracias, error), Contacto se reajusta para seguir sin desplazarse.
+for (const p of int.panels) p.wrap.querySelectorAll('.form-status').forEach((el) => new MutationObserver(() => fitPanels()).observe(el, { childList: true, characterData: true, subtree: true }));
 // Ventana flotante: se mide antes de mostrarla (si aún no está en la página, se agrega un momento para medir).
 function fitFloat() {
   const w = int.float.wrap, tmp = !w.isConnected;
   if (tmp) $('#css-layer').appendChild(w);
   w.style.display = '';
-  fitText(w.querySelector('.float-in'), 1, 1.5); // nunca más chico que el diseño; si sobra espacio, el texto crece
+  fitText(w.querySelector('.float-in'), 0.75, 1.5); // todo en una pantalla: el texto se ajusta para caber sin desplazarse
   if (tmp) w.remove();
 }
 

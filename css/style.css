@@ -425,3 +425,8 @@ body:not(.is-inside) .menu-btn{opacity:0;visibility:hidden;pointer-events:none}
 .portrait .pcar-btn{width:108px;height:108px;border-width:3px;font-size:66px;padding:0 0 6px}
 .portrait .pcar-btn.prev{left:-30px}.portrait .pcar-btn.next{right:-30px}
 .portrait .pcar-dot{width:52px;height:10px}
+
+/* Todo en una sola pantalla: en el celular el carrusel de la ficha es más bajo (la imagen se ve completa)
+   y el mensaje del formulario tiene su espacio reservado. */
+.portrait.float .carousel{aspect-ratio:16/10}
+.contact-form .form-status{min-height:1.45em;margin:0}
