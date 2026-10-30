@@ -430,3 +430,23 @@ body:not(.is-inside) .menu-btn{opacity:0;visibility:hidden;pointer-events:none}
    y el mensaje del formulario tiene su espacio reservado. */
 .portrait.float .carousel{aspect-ratio:16/10}
 .contact-form .form-status{min-height:1.45em;margin:0}
+
+/* ---------- Celular ---------- */
+/* La ayuda inicial va encima de los controles de abajo, sin taparlos. */
+@media (max-width:700px){
+  .tip{bottom:calc(84px + env(safe-area-inset-bottom,0px));max-width:calc(100vw - 32px);text-align:center;white-space:normal;font-size:12px}
+}
+/* Teléfono horizontal (pantalla baja): portada más compacta y controles en columna a la derecha. */
+@media (max-height:500px) and (orientation:landscape){
+  .topbar{padding-top:calc(10px + env(safe-area-inset-top,0px))}
+  .brand img{height:30px}
+  .caption{bottom:calc(14px + env(safe-area-inset-bottom,0px));max-width:min(520px,60vw)}
+  .caption h1{font-size:13vh;margin-top:6px}
+  .eyebrow{font-size:10px}
+  .caption .lede{margin-top:8px;font-size:13px;line-height:1.4}
+  .ext-actions{margin-top:12px}
+  .map-box{flex-direction:column-reverse;right:calc(12px + env(safe-area-inset-right,0px));bottom:50%;transform:translateY(50%);gap:10px}
+  .map-box .zoom{flex-direction:column}
+  #minimap{display:none}
+  .tip{bottom:calc(10px + env(safe-area-inset-bottom,0px))}
+}

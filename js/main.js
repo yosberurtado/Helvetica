@@ -25,7 +25,7 @@ const ROOMS = [
 // ---------------------------------------------------------------- Render base
 const canvas = $('#world');
 const renderer = new THREE.WebGLRenderer({ canvas, antialias: !isTouch, powerPreference: 'high-performance' });
-const PR = Math.min(devicePixelRatio, isTouch ? 1.5 : 1.75);
+let PR = Math.min(devicePixelRatio, isTouch ? 1.25 : 1.75);
 renderer.setPixelRatio(PR);
 renderer.setSize(innerWidth, innerHeight);
 renderer.outputColorSpace = THREE.SRGBColorSpace;
@@ -348,7 +348,7 @@ function buildInterior() {
   // Piso: espejo + capa de concreto translúcida para el brillo mojado de las referencias.
   const floorW = W + 2, floorD = len * D + 2;
   const mirror = new Reflector(new THREE.PlaneGeometry(floorW, floorD), {
-    textureWidth: Math.round(innerWidth * PR * (isTouch ? 0.35 : 0.5)), textureHeight: Math.round(innerHeight * PR * (isTouch ? 0.35 : 0.5)),
+    textureWidth: Math.round(innerWidth * PR * (isTouch ? 0.25 : 0.5)), textureHeight: Math.round(innerHeight * PR * (isTouch ? 0.25 : 0.5)),
     color: 0x8a8a80, multisample: isTouch ? 0 : 4,
   });
   mirror.rotation.x = -Math.PI / 2; mirror.position.set(0, 0, zEnd / 2); scene.add(mirror);
@@ -657,26 +657,58 @@ function applyPlayerCamera() {
 
 // Encuadre del holograma: ocupa la pantalla entre la barra superior y la interfaz inferior.
 function hudInsets() {
-  const narrow = innerWidth <= 700;
-  return { top: 78, bottom: narrow ? 84 : 92, side: narrow ? 10 : 28 };
+  // Se mide la interfaz real (barra superior y controles de abajo, con las zonas seguras del teléfono).
+  const narrow = innerWidth <= 700, gap = narrow ? 24 : 18;
+  const brand = $('.topbar .brand')?.getBoundingClientRect(), map = $('#intUI .map-box')?.getBoundingClientRect();
+  const top = brand && brand.height ? brand.bottom + gap : 78;
+  const vertical = map && map.height > map.width; // controles en columna a la derecha (teléfono horizontal)
+  const bottom = map && map.height && !vertical ? innerHeight - map.top + gap : narrow ? 84 : 92;
+  const side = vertical ? innerWidth - map.left + gap : narrow ? 22 : 28;
+  return { top, bottom: vertical ? gap + 8 : bottom, side };
 }
+// Encuadre exacto: se proyectan las cuatro esquinas del holograma (con su marco) y se busca la distancia y la
+// inclinación con que queda centrado entre la barra superior y los controles, con el mismo margen a los lados.
+// (La cámara mira desde la altura de los ojos: por perspectiva la parte de abajo se ve más grande, y esto lo compensa.)
+const fitCam = new THREE.PerspectiveCamera();
+fitCam.rotation.order = 'YXZ';
+const fitCorner = new V3();
 function panelFit(p) {
   const { top, bottom, side } = hudInsets();
-  const tanV = Math.tan(THREE.MathUtils.degToRad(camera.fov) / 2), tanH = tanV * camera.aspect;
-  const usableV = Math.max(0.3, (innerHeight - top - bottom) / innerHeight);
-  const usableH = (innerWidth - side * 2) / innerWidth;
+  fitCam.fov = camera.fov; fitCam.aspect = camera.aspect; fitCam.near = 0.05; fitCam.far = 220; fitCam.updateProjectionMatrix();
+  const yaw = Math.atan2(p.normal.x, p.normal.z);
   const hw = p.w / 2 + 0.2, hh = p.h / 2 + 0.2;
-  let dist = THREE.MathUtils.clamp(Math.max(hw / (tanH * usableH), hh / (tanV * usableV)), 2.6, 10.2);
   const at = (d) => p.center.clone().addScaledVector(p.normal, d);
+  const box = (d, pitch) => {
+    fitCam.position.copy(at(d)); fitCam.position.y = EYE; fitCam.rotation.set(pitch, yaw, 0); fitCam.updateMatrixWorld();
+    const q = { t: Infinity, b: -Infinity, l: Infinity, r: -Infinity };
+    for (const [sx, sy] of [[-1, -1], [1, -1], [1, 1], [-1, 1]]) {
+      fitCorner.copy(p.center).addScaledVector(p.along, sx * hw); fitCorner.y += sy * hh; fitCorner.project(fitCam);
+      const x = ((fitCorner.x + 1) / 2) * innerWidth, y = ((1 - fitCorner.y) / 2) * innerHeight;
+      q.t = Math.min(q.t, y); q.b = Math.max(q.b, y); q.l = Math.min(q.l, x); q.r = Math.max(q.r, x);
+    }
+    return q;
+  };
+  const midY = top + (innerHeight - top - bottom) / 2;
+  const pitchFor = (d) => { // mirar más arriba baja el holograma en pantalla
+    let lo = -0.8, hi = 1.2;
+    for (let i = 0; i < 26; i++) { const m = (lo + hi) / 2, q = box(d, m); if ((q.t + q.b) / 2 < midY) lo = m; else hi = m; }
+    return (lo + hi) / 2;
+  };
+  const fits = (d) => { const q = box(d, pitchFor(d)); return q.t >= top && q.b <= innerHeight - bottom && q.l >= side && q.r <= innerWidth - side; };
+  let lo = 1.5, hi = 14;
+  for (let i = 0; i < 22; i++) { const m = (lo + hi) / 2; if (fits(m)) hi = m; else lo = m; }
+  let dist = THREE.MathUtils.clamp(hi, 2.6, 12);
   while (dist > 2 && !walkable(at(dist).x, at(dist).z, p.obstacle)) dist -= 0.2; // el punto de vista siempre dentro de la sala
   const view = at(dist); view.y = EYE;
-  const ndcY = 1 - (2 * (top + (innerHeight - top - bottom) / 2)) / innerHeight;
+  const pitch = pitchFor(dist);
   const minD = p.obstacle ? 0.8 : 0.6;
   // Al acercarse, la cámara sube hasta la altura del centro del panel para verlo de frente.
   const liftAt = (d) => (p.center.y - EYE) * THREE.MathUtils.clamp(1 - (d - minD) / Math.max(0.1, dist - minD), 0, 1);
-  const pitchAt = (d) => Math.atan2(p.center.y - EYE - liftAt(d), d) - Math.atan(ndcY * tanV) * Math.min(1, d / dist);
-  const yaw = Math.atan2(p.normal.x, p.normal.z);
-  return { view, pitch: pitchAt(dist), yaw, dist, minD, pitchAt, liftAt };
+  const tanV = Math.tan(THREE.MathUtils.degToRad(camera.fov) / 2), ndcY = 1 - (2 * midY) / innerHeight;
+  const basePitch = (d) => Math.atan2(p.center.y - EYE - liftAt(d), d) - Math.atan(ndcY * tanV) * Math.min(1, d / dist);
+  const corr = pitch - basePitch(dist);
+  const pitchAt = (d) => basePitch(d) + corr * THREE.MathUtils.clamp((d - minD) / Math.max(0.1, dist - minD), 0, 1);
+  return { view, pitch, yaw, dist, minD, pitchAt, liftAt };
 }
 
 // Recorrido animado hasta quedar frente al holograma (de la sala o de la ficha flotante).
@@ -848,7 +880,13 @@ function fitText(box, min, max) {
 function fitPanels() {
   if (cssRenderer.domElement.style.display === 'none') return; // sin la capa visible no se puede medir
   refreshProjectCarousels();
-  for (const p of int.panels) fitText(p.wrap.querySelector('.holo-in'), 0.8, 1.45);
+  for (const p of int.panels) {
+    // El renderizador 3D agrega cada panel a la página recién al dibujarlo: si aún no está, se agrega un momento para medir.
+    const tmp = !p.wrap.isConnected;
+    if (tmp) $('#css-layer').appendChild(p.wrap);
+    fitText(p.wrap.querySelector('.holo-in'), 0.8, 1.45);
+    if (tmp) p.wrap.remove();
+  }
   refreshProjectCarousels();
 }
 document.fonts?.ready.then(() => fitPanels());
@@ -1336,10 +1374,23 @@ function warmUp() {
   document.querySelectorAll('#css-layer img').forEach((img) => img.decode?.().catch(() => {}));
 }
 
+// Calidad adaptable: si el equipo no alcanza ~40 cuadros por segundo de forma sostenida, baja la resolución
+// interna un paso (hasta 1×) para que la animación siga fluida.
+let slowFor = 0;
+function adaptQuality(ms) {
+  if (!booted || document.hidden || mode === 'transition' || PR <= 1 || ms > 250) return;
+  slowFor = ms > 25 ? slowFor + ms : Math.max(0, slowFor - ms * 2);
+  if (slowFor > 2500) {
+    slowFor = 0; PR = Math.max(1, PR - 0.25);
+    renderer.setPixelRatio(PR); composer.setPixelRatio(PR); composer.setSize(innerWidth, innerHeight);
+  }
+}
+
 let last = performance.now(), booted = false;
 function frame(now) {
   requestAnimationFrame(frame);
   const dt = Math.min(0.05, (now - last) / 1000); last = now;
+  adaptQuality(now - (frame.prev ?? now)); frame.prev = now;
   const t = now / 1000;
   runTweens(now);
   if (mode === 'exterior') {
