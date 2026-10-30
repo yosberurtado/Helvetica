@@ -1059,6 +1059,74 @@ document.addEventListener('fullscreenchange', () => fsBtn.setAttribute('aria-lab
 // Formulario de contacto. Dentro de WordPress (plugin Casa Cuco 3D) envía por el servidor;
 // como página suelta, abre el correo del visitante dirigido a contacto@grupokeipoint.com.
 const pageStart = Date.now();
+// ---------------------------------------------------------------- Celular: formulario a pantalla completa
+// En el teléfono, escribir en un panel inclinado en 3D es incómodo: al tocar el formulario, la tarjeta de
+// Contacto se abre plana y a pantalla completa, como una página normal. Se cierra con la ✕ o juntando
+// dos dedos (pellizco).
+const mobileForm = () => isTouch && Math.min(innerWidth, innerHeight) <= 700;
+let sheetOpen = false;
+const sheet = document.createElement('div');
+sheet.className = 'form-sheet'; sheet.hidden = true;
+sheet.setAttribute('role', 'dialog'); sheet.setAttribute('aria-modal', 'true'); sheet.setAttribute('aria-label', 'Contacto');
+sheet.innerHTML = '<div class="sheet-card"><div class="sheet-bar"><span class="sheet-hint">Junta dos dedos para volver</span><button type="button" class="sheet-x" aria-label="Cerrar">×</button></div></div>';
+{
+  const card = sheet.querySelector('.sheet-card');
+  card.append($('#sec-contacto .contact-main').cloneNode(true), $('#sec-contacto .contact-block').cloneNode(true));
+}
+document.body.appendChild(sheet);
+sheet.querySelector('.sheet-x').addEventListener('click', () => closeFormSheet());
+// El campo que se está escribiendo queda a la vista sobre el teclado del teléfono.
+sheet.addEventListener('focusin', (e) => { if (e.target.matches('input, textarea')) setTimeout(() => e.target.scrollIntoView({ block: 'center', behavior: 'smooth' }), 300); });
+function setPanelFormReadonly() { // en el celular los campos del panel 3D solo abren la tarjeta (no el teclado)
+  for (const p of int.panels) p.wrap.querySelectorAll('.contact-form input, .contact-form textarea').forEach((f) => { if (f.name !== 'sitio_web') f.readOnly = mobileForm(); });
+}
+setPanelFormReadonly();
+addEventListener('resize', setPanelFormReadonly);
+function openFormSheet(field) {
+  if (sheetOpen) return;
+  sheetOpen = true; sheet.hidden = false; sheet.scrollTop = 0;
+  sheet.classList.remove('closing'); void sheet.offsetWidth; sheet.classList.add('open');
+  document.body.classList.add('sheet-open'); hideTip(); yawVel = 0; drag = null;
+  const f = sheet.querySelector(`.contact-form [name="${field || 'name'}"]`) || sheet.querySelector('.contact-form [name="name"]');
+  f?.focus({ preventScroll: true }); // dentro del toque: el teclado se abre de inmediato
+}
+function closeFormSheet() {
+  if (!sheetOpen) return;
+  document.activeElement?.blur?.();
+  sheet.classList.remove('open'); sheet.classList.add('closing');
+  const card = sheet.querySelector('.sheet-card'); card.style.transform = '';
+  setTimeout(() => {
+    sheet.hidden = true; sheet.classList.remove('closing');
+    sheetOpen = false; document.body.classList.remove('sheet-open'); last = performance.now();
+  }, 260);
+}
+// Tocar un campo o el botón del formulario del panel abre la tarjeta (solo en el celular).
+document.addEventListener('click', (e) => {
+  if (!mobileForm() || sheetOpen) return;
+  const hit = e.target.closest('#css-layer .contact-form input, #css-layer .contact-form textarea, #css-layer .contact-form button');
+  if (!hit) return;
+  e.preventDefault(); e.stopPropagation();
+  openFormSheet(hit.name);
+}, true);
+// Pellizco (dos dedos que se juntan): la tarjeta se achica mientras se hace el gesto y, si se junta lo suficiente, se cierra.
+{
+  const card = sheet.querySelector('.sheet-card');
+  let d0 = 0, ratio = 1;
+  const dist = (t) => Math.hypot(t[0].clientX - t[1].clientX, t[0].clientY - t[1].clientY);
+  sheet.addEventListener('touchstart', (e) => { if (e.touches.length === 2) { d0 = dist(e.touches); ratio = 1; card.style.transition = 'none'; } }, { passive: true });
+  sheet.addEventListener('touchmove', (e) => {
+    if (e.touches.length !== 2 || !d0) return;
+    e.preventDefault();
+    ratio = Math.min(1, dist(e.touches) / d0);
+    card.style.transform = `scale(${Math.max(0.55, ratio).toFixed(3)})`; card.style.opacity = Math.max(0.4, ratio).toFixed(2);
+  }, { passive: false });
+  sheet.addEventListener('touchend', (e) => {
+    if (!d0 || e.touches.length) return;
+    d0 = 0; card.style.transition = ''; card.style.opacity = '';
+    if (ratio < 0.8) closeFormSheet(); else card.style.transform = '';
+  });
+}
+
 document.addEventListener('submit', (e) => {
   const form = e.target.closest('.contact-form');
   if (!form) return;
@@ -1264,7 +1332,7 @@ const endTouch = (e) => { touches.delete(e.pointerId); if (touches.size < 2) pin
 canvas.addEventListener('pointerup', endTouch); canvas.addEventListener('pointercancel', endTouch);
 
 addEventListener('keydown', (e) => {
-  if (e.key === 'Escape') { closeMenu(); return; }
+  if (e.key === 'Escape') { if (sheetOpen) closeFormSheet(); closeMenu(); return; }
   if (/INPUT|TEXTAREA|SELECT/.test(e.target.tagName)) return;
   if (mode === 'exterior') {
     if (e.key === 'Enter' && e.target === document.body) enterHouse();
@@ -1407,6 +1475,7 @@ function frame(now) {
     int.update(t);
     if (int.marker.material.opacity > 0) { int.marker.material.opacity = Math.max(0, int.marker.material.opacity - dt * 0.9); int.marker.scale.setScalar(1 + (1 - int.marker.material.opacity) * 0.8); }
   }
+  if (sheetOpen) return; // formulario a pantalla completa: la escena 3D queda en pausa (fluidez y batería)
   composer.render();
   if (scene === int.scene) cssRenderer.render(int.scene, camera);
   if (!booted) { booted = true; warmUp(); setTimeout(() => $('#loading').classList.add('off'), 350); }

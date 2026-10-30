@@ -450,3 +450,30 @@ body:not(.is-inside) .menu-btn{opacity:0;visibility:hidden;pointer-events:none}
   #minimap{display:none}
   .tip{bottom:calc(10px + env(safe-area-inset-bottom,0px))}
 }
+
+/* ---------- Celular: formulario de Contacto a pantalla completa (plano, como una página normal) ---------- */
+.form-sheet{position:fixed;inset:0;z-index:40;overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;touch-action:pan-y;
+  background:radial-gradient(120% 60% at 50% 0%,#1a2206 0%,#070707 60%);color:var(--bone);font-family:var(--serif);
+  padding:calc(12px + env(safe-area-inset-top,0px)) 18px calc(24px + env(safe-area-inset-bottom,0px))}
+.form-sheet[hidden]{display:none}
+.sheet-card{max-width:560px;margin:0 auto;padding:18px 20px 26px;border:2px solid var(--acid);border-radius:10px;background:#0d0f08f2;transform-origin:50% 40%;transition:transform .25s ease,opacity .25s ease;text-align:center}
+.form-sheet.open .sheet-card{animation:sheet-in .32s cubic-bezier(.2,.8,.2,1) both}
+.form-sheet.closing .sheet-card{transform:scale(.6)!important;opacity:0!important}
+@keyframes sheet-in{from{transform:scale(.82) translateY(20px);opacity:0}to{transform:none;opacity:1}}
+.sheet-bar{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:-4px -6px 10px}
+.sheet-hint{font:500 12px var(--ui);letter-spacing:.06em;color:#f4f4ea99;text-align:left}
+.sheet-x{flex:none;width:46px;height:46px;border-radius:50%;border:2px solid var(--acid);background:#070707;color:var(--acid);font:30px/1 var(--ui);cursor:pointer;padding:0 0 3px}
+.form-sheet .contact-main{text-align:center}
+.form-sheet .slash{margin:0;font-size:17px}
+.form-sheet .display{margin:6px 0 0;font-size:30px;line-height:1.02}
+.form-sheet .contact-main p{margin:8px auto 0;font-size:16px;line-height:1.45;max-width:46ch}
+.form-sheet .contact-main .pase{margin-top:12px;font-size:34px;color:var(--acid)}
+.form-sheet .contact-form{margin-top:16px;grid-template-columns:1fr;gap:10px}
+.form-sheet .contact-form input,.form-sheet .contact-form textarea{font-size:16px;padding:14px 14px;border-radius:6px;letter-spacing:.02em}
+.form-sheet .contact-form textarea{min-height:120px}
+.form-sheet .contact-form .btn-solid{justify-self:stretch;padding:16px;font-size:14px}
+.form-sheet .form-status{font-size:15px}
+.form-sheet .contact-block{margin-top:22px;padding-top:16px;border-top:2px solid #daff0255}
+.form-sheet .contact-block h3{margin:0 0 6px;font:18px var(--display);text-transform:uppercase;color:var(--acid)}
+.form-sheet .contact-block p{margin:2px 0;font-size:16px}
+.form-sheet .contact-block .mono{font:15px var(--mono)}
