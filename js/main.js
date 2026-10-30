@@ -255,10 +255,11 @@ function buildExterior() {
   for (let i = 0; i < 300; i++) { const a = (i / 300) * Math.PI * 2; orbitPts.push(new V3(Math.cos(a) * 12, 0.03, 4.5 + Math.sin(a) * 13)); }
   const orbitLine = new THREE.LineLoop(new THREE.BufferGeometry().setFromPoints(orbitPts), new THREE.LineDashedMaterial({ color: ACID, dashSize: 0.12, gapSize: 0.2, transparent: true, opacity: 0.4 }));
   orbitLine.computeLineDistances(); scene.add(orbitLine);
-  scene.add(makeDust(400, [-20, 20], [0, 16], [-12, 24]));
+  const dust = makeDust(400, [-20, 20], [0, 16], [-12, 24]); scene.add(dust);
 
   return {
     scene, DEPTH, doorParts, mouthX, mouthTop: B[1],
+    lite() { orbitLine.visible = false; dust.visible = false; }, // celular: sin anillo punteado ni polvo
     doorTri: [A, B, C].map(([x, y]) => new V3(x, Math.max(y, 0), DEPTH + 0.1)),
     update(t) {
       eyes.forEach((e, i) => (e.material.emissiveIntensity = 2.3 + 0.7 * Math.sin(t * 1.4 + i * 0.7)));
@@ -434,7 +435,7 @@ function buildInterior() {
     panels.push({ room: i, group: pg, css, wrap, light, center: new V3(px, 2.75, pz), normal, along, obstacle, opacity: 0, frame: null, slab: null });
   });
 
-  scene.add(makeDust(350, [-half, half], [0.2, H + 2], [zEnd, 0]));
+  const dust = makeDust(350, [-half, half], [0.2, H + 2], [zEnd, 0]); scene.add(dust);
 
   // Ventana flotante: holograma que se desprende de un panel (fichas de Proyectos, manifiesto de Nosotros)
   // y flota frente a él, proyectado desde un anillo de luz en el piso.
@@ -515,6 +516,14 @@ function buildInterior() {
   return {
     scene, panels, float, rects, obstacles, marker, mirror, solids, doorHits, layoutPanels,
     // Piso liviano: sin reflejo (la escena se dibuja una vez y no dos); queda un concreto oscuro brillante.
+    // Celular: sin círculos ni halos en el piso, sin polvo, sin las luces de las puertas y sin reflejo.
+    lite() {
+      this.lowFloor();
+      floorDecals.visible = false; dust.visible = false; proj.visible = false;
+      doors.forEach((d) => scene.remove(d.light));
+      const hemi = scene.children.find((o) => o.isHemisphereLight);
+      if (hemi) hemi.intensity = 0.62; // compensa un poco la luz de las puertas
+    },
     lowFloor() {
       if (!mirror.visible) return;
       mirror.visible = false;
@@ -535,7 +544,8 @@ const ext = buildExterior();
 const int = buildInterior();
 const wantPortrait = () => innerWidth < innerHeight * 0.9;
 // Celulares con poca memoria (Chrome informa la memoria del equipo): parten con el piso liviano.
-if (lightMode || (isTouch && (navigator.deviceMemory || 8) <= 4)) int.lowFloor();
+if (isTouch) { int.lite(); ext.lite(); } // en el teléfono, la escena más liviana: más estable y fluida
+else if (lightMode) int.lowFloor();
 let portraitLayout = wantPortrait();
 int.layoutPanels(portraitLayout);
 let scene = ext.scene;
@@ -956,14 +966,13 @@ function showFloat(id, room, nodes) {
 function openManifesto() {
   const art = document.querySelector('#sec-nosotros .manifesto');
   if (!art) return;
+  if (mobileForm()) { openManifestoSheet(art); return; } // celular: tarjeta plana
   const copy = document.createElement('div'); copy.className = 'manifesto-copy';
   copy.append(...[...art.children].map((n) => n.cloneNode(true)));
   stopCarousel();
   showFloat('manifiesto', 1, [closeX(), copy]);
 }
-function openProject(id) {
-  const art = document.querySelector(`#sec-proyectos .project-detail[data-project="${id}"]`);
-  if (!art || mode !== 'interior') return;
+function buildCarousel(art) {
   const car = document.createElement('div'); car.className = 'carousel';
   const dots = document.createElement('div'); dots.className = 'car-dots';
   [...art.querySelectorAll('.detail-media img')].forEach((im, k) => {
@@ -977,8 +986,16 @@ function openProject(id) {
     const b = document.createElement('button'); b.type = 'button'; b.className = 'car-btn ' + cls; b.setAttribute('aria-label', label); b.textContent = txt; car.appendChild(b);
   }
   car.appendChild(dots);
+  if (car.querySelectorAll('.slide').length < 2) car.classList.add('single');
+  return car;
+}
+function openProject(id) {
+  const art = document.querySelector(`#sec-proyectos .project-detail[data-project="${id}"]`);
+  if (!art || mode !== 'interior') return;
+  if (mobileForm()) { openProjectSheet(art); return; } // celular: tarjeta plana, sin holograma 3D
+  const car = buildCarousel(art);
   showFloat(id, 2, [closeX(), car, art.querySelector('.detail-copy').cloneNode(true)]);
-  if (car.querySelectorAll('.slide').length > 1) startCarousel(); else { stopCarousel(); car.classList.add('single'); }
+  if (!car.classList.contains('single')) startCarousel(); else stopCarousel();
 }
 function closeProject(instant = false) {
   if (!floatOpen) return;
@@ -994,8 +1011,7 @@ function closeProject(instant = false) {
   }, () => { fl.group.scale.set(1, 1, 1); hide(); });
   if (mode === 'interior' && atPanel === fl.room) flyToRoom(fl.room);
 }
-function showSlide(i) {
-  const car = int.float.wrap.querySelector('.carousel');
+function showSlide(i, car = int.float.wrap.querySelector('.carousel')) {
   if (!car) return;
   const slides = car.querySelectorAll('.slide'), dots = car.querySelectorAll('.car-dot');
   const n = slides.length, next = ((i % n) + n) % n;
@@ -1080,22 +1096,56 @@ document.addEventListener('fullscreenchange', () => fsBtn.setAttribute('aria-lab
 // Formulario de contacto. Dentro de WordPress (plugin Casa Cuco 3D) envía por el servidor;
 // como página suelta, abre el correo del visitante dirigido a contacto@grupokeipoint.com.
 const pageStart = Date.now();
-// ---------------------------------------------------------------- Celular: formulario a pantalla completa
-// En el teléfono, escribir en un panel inclinado en 3D es incómodo: al tocar el formulario, la tarjeta de
-// Contacto se abre plana y a pantalla completa, como una página normal. Se cierra con la ✕ o juntando
-// dos dedos (pellizco).
+// ---------------------------------------------------------------- Celular: tarjetas planas a pantalla completa
+// En el teléfono, el formulario de Contacto, las fichas de proyectos y el manifiesto se abren como una tarjeta
+// plana a pantalla completa (como una página normal), en vez de hologramas 3D: aparecen al instante, no
+// cambian de tamaño y no cargan la memoria gráfica. Se cierran con la ✕ o juntando dos dedos (pellizco).
 const mobileForm = () => isTouch && Math.min(innerWidth, innerHeight) <= 700;
 let sheetOpen = false;
 const sheet = document.createElement('div');
 sheet.className = 'form-sheet'; sheet.hidden = true;
 sheet.setAttribute('role', 'dialog'); sheet.setAttribute('aria-modal', 'true'); sheet.setAttribute('aria-label', 'Contacto');
-sheet.innerHTML = '<div class="sheet-card"><div class="sheet-bar"><span class="sheet-hint">Junta dos dedos para volver</span><button type="button" class="sheet-x" aria-label="Cerrar">×</button></div></div>';
-{
-  const card = sheet.querySelector('.sheet-card');
-  card.append($('#sec-contacto .contact-main').cloneNode(true), $('#sec-contacto .contact-block').cloneNode(true));
-}
+sheet.innerHTML = '<div class="sheet-card"><div class="sheet-bar"><span class="sheet-hint">Junta dos dedos para volver</span><button type="button" class="sheet-x" aria-label="Cerrar">×</button></div><div class="sheet-body"></div></div>';
+const sheetBody = sheet.querySelector('.sheet-body');
+// El formulario se crea una sola vez: si se cierra y se vuelve a abrir, conserva lo escrito.
+const formNodes = [$('#sec-contacto .contact-main').cloneNode(true), $('#sec-contacto .contact-block').cloneNode(true)];
 document.body.appendChild(sheet);
-sheet.querySelector('.sheet-x').addEventListener('click', () => closeFormSheet());
+sheet.querySelector('.sheet-x').addEventListener('click', () => closeSheet());
+function showSheet(kind, nodes, label) {
+  sheet.dataset.kind = kind; sheet.setAttribute('aria-label', label);
+  sheetBody.replaceChildren(...nodes);
+  sheet.style.removeProperty('--fz');
+  if (sheetOpen) { sheet.scrollTop = 0; return; }
+  sheetOpen = true; sheet.hidden = false; sheet.scrollTop = 0;
+  sheet.classList.remove('closing'); void sheet.offsetWidth; sheet.classList.add('open');
+  document.body.classList.add('sheet-open'); hideTip(); yawVel = 0; drag = null;
+}
+function openProjectSheet(art) {
+  showSheet('project', [buildCarousel(art), art.querySelector('.detail-copy').cloneNode(true)], 'Proyecto');
+  fitText(sheet, 0.72, 1.3); // la ficha completa en una pantalla, con el texto lo más grande posible
+}
+function openManifestoSheet(art) {
+  const copy = document.createElement('div'); copy.className = 'manifesto-copy';
+  copy.append(...[...art.children].map((n) => n.cloneNode(true)));
+  showSheet('manifesto', [copy], 'Nuestro manifiesto');
+  fitText(sheet, 0.72, 1.3);
+}
+// Carrusel de la tarjeta: flechas, puntos y deslizar con el dedo.
+sheet.addEventListener('click', (e) => {
+  const btn = e.target.closest('.car-btn, .car-dot');
+  if (!btn) return;
+  const car = btn.closest('.carousel');
+  showSlide(btn.classList.contains('car-dot') ? +btn.dataset.i : +(car.dataset.i || 0) + (btn.classList.contains('next') ? 1 : -1), car);
+});
+{
+  let x0 = null;
+  sheet.addEventListener('touchstart', (e) => { x0 = e.touches.length === 1 && e.target.closest('.carousel') ? e.touches[0].clientX : null; }, { passive: true });
+  sheet.addEventListener('touchend', (e) => {
+    if (x0 == null || e.touches.length) return;
+    const dx = e.changedTouches[0].clientX - x0, car = e.target.closest('.carousel'); x0 = null;
+    if (car && Math.abs(dx) > 40) showSlide(+(car.dataset.i || 0) + (dx < 0 ? 1 : -1), car);
+  });
+}
 // El campo que se está escribiendo queda a la vista sobre el teclado del teléfono.
 sheet.addEventListener('focusin', (e) => { if (e.target.matches('input, textarea')) setTimeout(() => e.target.scrollIntoView({ block: 'center', behavior: 'smooth' }), 300); });
 function setPanelFormReadonly() { // en el celular los campos del panel 3D solo abren la tarjeta (no el teclado)
@@ -1104,14 +1154,12 @@ function setPanelFormReadonly() { // en el celular los campos del panel 3D solo 
 setPanelFormReadonly();
 addEventListener('resize', setPanelFormReadonly);
 function openFormSheet(field) {
-  if (sheetOpen) return;
-  sheetOpen = true; sheet.hidden = false; sheet.scrollTop = 0;
-  sheet.classList.remove('closing'); void sheet.offsetWidth; sheet.classList.add('open');
-  document.body.classList.add('sheet-open'); hideTip(); yawVel = 0; drag = null;
+  if (sheetOpen && sheet.dataset.kind === 'form') return;
+  showSheet('form', formNodes, 'Contacto');
   const f = sheet.querySelector(`.contact-form [name="${field || 'name'}"]`) || sheet.querySelector('.contact-form [name="name"]');
   f?.focus({ preventScroll: true }); // dentro del toque: el teclado se abre de inmediato
 }
-function closeFormSheet() {
+function closeSheet() {
   if (!sheetOpen) return;
   document.activeElement?.blur?.();
   sheet.classList.remove('open'); sheet.classList.add('closing');
@@ -1119,6 +1167,7 @@ function closeFormSheet() {
   setTimeout(() => {
     sheet.hidden = true; sheet.classList.remove('closing');
     sheetOpen = false; document.body.classList.remove('sheet-open'); last = performance.now();
+    if (resizePending) { resizePending = false; dispatchEvent(new Event('resize')); }
   }, 260);
 }
 // Tocar un campo o el botón del formulario del panel abre la tarjeta (solo en el celular).
@@ -1144,7 +1193,7 @@ document.addEventListener('click', (e) => {
   sheet.addEventListener('touchend', (e) => {
     if (!d0 || e.touches.length) return;
     d0 = 0; card.style.transition = ''; card.style.opacity = '';
-    if (ratio < 0.8) closeFormSheet(); else card.style.transform = '';
+    if (ratio < 0.8) closeSheet(); else card.style.transform = '';
   });
 }
 
@@ -1353,7 +1402,7 @@ const endTouch = (e) => { touches.delete(e.pointerId); if (touches.size < 2) pin
 canvas.addEventListener('pointerup', endTouch); canvas.addEventListener('pointercancel', endTouch);
 
 addEventListener('keydown', (e) => {
-  if (e.key === 'Escape') { if (sheetOpen) closeFormSheet(); closeMenu(); return; }
+  if (e.key === 'Escape') { if (sheetOpen) closeSheet(); closeMenu(); return; }
   if (/INPUT|TEXTAREA|SELECT/.test(e.target.tagName)) return;
   if (mode === 'exterior') {
     if (e.key === 'Enter' && e.target === document.body) enterHouse();
@@ -1509,7 +1558,15 @@ function frame(now) {
 }
 requestAnimationFrame(frame);
 
+let lastW = innerWidth, lastH = innerHeight, resizePending = false;
 addEventListener('resize', () => {
+  // Con una tarjeta abierta (teclado en pantalla) no se rehace nada: se aplica al cerrarla.
+  if (sheetOpen) { resizePending = true; return; }
+  // En el celular, el teclado y la barra del navegador cambian solo el alto: no vale la pena rehacer
+  // los búferes gráficos (eso pedía mucha memoria de golpe y podía cerrar Chrome).
+  if (isTouch && innerWidth === lastW && document.activeElement?.matches?.('input, textarea')) return; // teclado abierto
+  if (isTouch && innerWidth === lastW && Math.abs(innerHeight - lastH) < 200) return;
+  lastW = innerWidth; lastH = innerHeight;
   camera.aspect = innerWidth / innerHeight; camera.fov = fovFor(scene === int.scene); camera.updateProjectionMatrix();
   renderer.setSize(innerWidth, innerHeight); composer.setSize(innerWidth, innerHeight);
   cssRenderer.setSize(innerWidth, innerHeight);

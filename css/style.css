@@ -477,3 +477,19 @@ body:not(.is-inside) .menu-btn{opacity:0;visibility:hidden;pointer-events:none}
 .form-sheet .contact-block h3{margin:0 0 6px;font:18px var(--display);text-transform:uppercase;color:var(--acid)}
 .form-sheet .contact-block p{margin:2px 0;font-size:16px}
 .form-sheet .contact-block .mono{font:15px var(--mono)}
+/* Tarjeta plana del celular con una ficha de proyecto o el manifiesto (el texto lo ajusta main.js con --fz). */
+.form-sheet[data-kind="project"] .sheet-card,.form-sheet[data-kind="manifesto"] .sheet-card{text-align:left}
+.form-sheet .carousel{aspect-ratio:16/10;border:2px solid #fff;border-radius:6px;touch-action:pan-y}
+.form-sheet .carousel .car-btn{width:44px;height:44px;margin-top:-22px;font-size:28px;border-width:2px}
+.form-sheet .carousel .car-dot{width:26px;height:6px}
+.form-sheet .detail-copy{margin-top:12px;gap:7px}
+.form-sheet .detail-copy .display.small{font-size:calc(var(--fz,1)*30px);line-height:1}
+.form-sheet .detail-copy .detail-sub{font-size:calc(var(--fz,1)*18px)}
+.form-sheet .detail-copy .cats{font-size:calc(var(--fz,1)*11px)}
+.form-sheet .detail-copy p{font-size:calc(var(--fz,1)*15px);line-height:1.5}
+.form-sheet .detail-copy .btn-bar{font-size:calc(var(--fz,1)*15px);padding:12px 16px}
+.form-sheet .manifesto-copy{text-align:center;gap:10px}
+.form-sheet .manifesto-title{font-size:calc(var(--fz,1)*38px)}
+.form-sheet .manifesto-copy p{font-size:calc(var(--fz,1)*15px);line-height:1.5}
+.form-sheet .manifesto-copy .manifesto-q{font-size:calc(var(--fz,1)*18px)}
+.form-sheet .manifesto-copy .manifesto-end{font-size:calc(var(--fz,1)*20px)}
